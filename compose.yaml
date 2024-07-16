@@ -1,0 +1,8 @@
+services:
+  mongodb:
+    image: mongo:latest
+    ports:
+        - target: 27017
+          published: 27017
+          protocol: tcp
+          mode: host
