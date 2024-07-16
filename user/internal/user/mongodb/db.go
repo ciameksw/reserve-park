@@ -6,11 +6,20 @@ import (
 	"log"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var mongoCollection *mongo.Collection
+
+type User struct {
+	ID              primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	UserID          string             `json:"user_id" bson:"user_id"`
+	Username        string             `json:"username" bson:"username"`
+	Email           string             `json:"email" bson:"email"`
+	TotalMoneySpent float64            `json:"total_money_spent" bson:"total_money_spent"`
+}
 
 func Connect(uri string, db string) {
 	client, err := mongo.NewClient(options.Client().ApplyURI(uri))
@@ -26,10 +35,14 @@ func Connect(uri string, db string) {
 		log.Fatal(err)
 	}
 
-	collection := client.Database(db).Collection(db)
+	err = client.Ping(ctx, nil)
+	if err != nil {
+		log.Fatal("Failed to connect to MongoDB:", err)
+	}
 
-	mongoCollection = collection
-	fmt.Printf("Connected to MongoDB, db: %s collection: %s\n", mongoCollection.Database().Name(), mongoCollection.Name())
+	c := client.Database(db).Collection(db)
+	mongoCollection = c
+	fmt.Printf("Connected to MongoDB, db: %s collection: %s\n", c.Database().Name(), c.Name())
 }
 
 func Disconnect() {
