@@ -1,16 +1,29 @@
 package config
 
+import (
+	"log"
+	"os"
+)
+
 type Config struct {
 	ServerHost string
 	ServerPort string
 	MongoURI   string
 }
 
-// TODO: Implement the GetConfig function
 func GetConfig() *Config {
 	return &Config{
-		ServerHost: "localhost",
-		ServerPort: "3001",
-		MongoURI:   "mongodb://localhost:27017",
+		ServerHost: getEnv("SERVER_HOST", "localhost"),
+		ServerPort: getEnv("SERVER_PORT", "3001"),
+		MongoURI:   getEnv("MONGO_URI", "mongodb://localhost:27017"),
 	}
+}
+
+func getEnv(key, df string) string {
+	val, ok := os.LookupEnv(key)
+	if !ok {
+		log.Printf("Using default value for %s (%s)", key, df)
+		return df
+	}
+	return val
 }
