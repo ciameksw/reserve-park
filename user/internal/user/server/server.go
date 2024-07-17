@@ -1,22 +1,39 @@
 package server
 
 import (
+	"log"
 	"net/http"
 
+	"github.com/ciameksw/reserve-park/user/internal/user/config"
+	"github.com/ciameksw/reserve-park/user/internal/user/mongodb"
 	"github.com/gorilla/mux"
 )
 
-func GetServer(host string, port string) *http.Server {
-	router := mux.NewRouter()
+type Server struct {
+	Config  *config.Config
+	MongoDB *mongodb.MongoDB
+}
 
-	router.HandleFunc("/users", addUser).Methods("POST")
-	router.HandleFunc("/users", editUser).Methods("PUT")
-	router.HandleFunc("/users/{id}", deleteUser).Methods("DELETE")
-	router.HandleFunc("/users/{id}", getUser).Methods("GET")
-	router.HandleFunc("/users", getAllUsers).Methods("GET")
+func NewServer(cfg *config.Config, db *mongodb.MongoDB) *Server {
+	return &Server{
+		Config:  cfg,
+		MongoDB: db,
+	}
+}
 
-	return &http.Server{
-		Addr:    host + ":" + port,
-		Handler: router,
+func (s *Server) Start() {
+	r := mux.NewRouter()
+
+	r.HandleFunc("/users", s.addUser).Methods("POST")
+	r.HandleFunc("/users", s.editUser).Methods("PUT")
+	r.HandleFunc("/users/{id}", s.deleteUser).Methods("DELETE")
+	r.HandleFunc("/users/{id}", s.getUser).Methods("GET")
+	r.HandleFunc("/users", s.getAllUsers).Methods("GET")
+
+	addr := s.Config.ServerHost + ":" + s.Config.ServerPort
+	log.Printf("Server started at %s\n", addr)
+	err := http.ListenAndServe(addr, r)
+	if err != nil {
+		log.Fatal(err)
 	}
 }

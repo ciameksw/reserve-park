@@ -17,7 +17,7 @@ type addInput struct {
 	Email    string `json:"email"`
 }
 
-func addUser(w http.ResponseWriter, r *http.Request) {
+func (s *Server) addUser(w http.ResponseWriter, r *http.Request) {
 	var input addInput
 
 	err := json.NewDecoder(r.Body).Decode(&input)
@@ -33,7 +33,7 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 		TotalMoneySpent: 0,
 	}
 
-	_, err = m.GetCollection().InsertOne(r.Context(), data)
+	_, err = s.MongoDB.Collection.InsertOne(r.Context(), data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -49,7 +49,7 @@ type editInput struct {
 	TotalMoneySpent float64 `json:"total_money_spent,omitempty"`
 }
 
-func editUser(w http.ResponseWriter, r *http.Request) {
+func (s *Server) editUser(w http.ResponseWriter, r *http.Request) {
 	var input editInput
 
 	err := json.NewDecoder(r.Body).Decode(&input)
@@ -70,7 +70,7 @@ func editUser(w http.ResponseWriter, r *http.Request) {
 		update["total_money_spent"] = input.TotalMoneySpent
 	}
 
-	res, err := m.GetCollection().UpdateOne(r.Context(), filter, bson.M{"$set": update})
+	res, err := s.MongoDB.Collection.UpdateOne(r.Context(), filter, bson.M{"$set": update})
 	if err != nil {
 		fmt.Println(err.Error())
 		http.Error(w, "Failed to update user", http.StatusInternalServerError)
@@ -85,7 +85,7 @@ func editUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func deleteUser(w http.ResponseWriter, r *http.Request) {
+func (s *Server) deleteUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
@@ -94,7 +94,7 @@ func deleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	filter := bson.M{"user_id": bson.M{"$eq": id}}
-	res := m.GetCollection().FindOneAndDelete(r.Context(), filter)
+	res := s.MongoDB.Collection.FindOneAndDelete(r.Context(), filter)
 	if res.Err() != nil {
 		if res.Err() == mongo.ErrNoDocuments {
 			http.Error(w, "User not found", http.StatusNotFound)
@@ -108,7 +108,7 @@ func deleteUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func getUser(w http.ResponseWriter, r *http.Request) {
+func (s *Server) getUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
@@ -117,7 +117,7 @@ func getUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	filter := bson.M{"user_id": bson.M{"$eq": id}}
-	res := m.GetCollection().FindOne(r.Context(), filter)
+	res := s.MongoDB.Collection.FindOne(r.Context(), filter)
 	if res.Err() != nil {
 		if res.Err() == mongo.ErrNoDocuments {
 			http.Error(w, "User not found", http.StatusNotFound)
@@ -146,9 +146,9 @@ func getUser(w http.ResponseWriter, r *http.Request) {
 	w.Write(j)
 }
 
-func getAllUsers(w http.ResponseWriter, r *http.Request) {
+func (s *Server) getAllUsers(w http.ResponseWriter, r *http.Request) {
 
-	res, err := m.GetCollection().Find(r.Context(), bson.M{})
+	res, err := s.MongoDB.Collection.Find(r.Context(), bson.M{})
 	if err != nil {
 		http.Error(w, "Failed to get users", http.StatusInternalServerError)
 		return

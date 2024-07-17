@@ -2,7 +2,6 @@ package mongodb
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
 
@@ -10,8 +9,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
-
-var mongoCollection *mongo.Collection
 
 type User struct {
 	ID              primitive.ObjectID `json:"id" bson:"_id,omitempty"`
@@ -21,10 +18,14 @@ type User struct {
 	TotalMoneySpent float64            `json:"total_money_spent" bson:"total_money_spent"`
 }
 
-func Connect(uri string, db string) {
+type MongoDB struct {
+	Collection *mongo.Collection
+}
+
+func Connect(uri string, db string) (*MongoDB, error) {
 	client, err := mongo.NewClient(options.Client().ApplyURI(uri))
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -32,29 +33,23 @@ func Connect(uri string, db string) {
 
 	err = client.Connect(ctx)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	err = client.Ping(ctx, nil)
 	if err != nil {
-		log.Fatal("Failed to connect to MongoDB:", err)
+		return nil, err
 	}
 
-	c := client.Database(db).Collection(db)
-	mongoCollection = c
-	fmt.Printf("Connected to MongoDB, db: %s collection: %s\n", c.Database().Name(), c.Name())
+	return &MongoDB{Collection: client.Database(db).Collection(db)}, nil
 }
 
-func Disconnect() {
+func (m *MongoDB) Disconnect() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	err := mongoCollection.Database().Client().Disconnect(ctx)
+	err := m.Collection.Database().Client().Disconnect(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
-}
-
-func GetCollection() *mongo.Collection {
-	return mongoCollection
 }
