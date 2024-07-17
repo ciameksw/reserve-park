@@ -8,7 +8,6 @@ import (
 	m "github.com/ciameksw/reserve-park/user/internal/user/mongodb"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -33,7 +32,7 @@ func (s *Server) addUser(w http.ResponseWriter, r *http.Request) {
 		TotalMoneySpent: 0,
 	}
 
-	_, err = s.MongoDB.Collection.InsertOne(r.Context(), data)
+	err = s.MongoDB.AddUser(data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -42,15 +41,8 @@ func (s *Server) addUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
-type editInput struct {
-	UserID          string  `json:"user_id"`
-	Username        string  `json:"username,omitempty"`
-	Email           string  `json:"email,omitempty"`
-	TotalMoneySpent float64 `json:"total_money_spent,omitempty"`
-}
-
 func (s *Server) editUser(w http.ResponseWriter, r *http.Request) {
-	var input editInput
+	var input m.User
 
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
@@ -58,27 +50,10 @@ func (s *Server) editUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filter := bson.M{"user_id": bson.M{"$eq": input.UserID}}
-	update := bson.M{}
-	if input.Username != "" {
-		update["username"] = input.Username
-	}
-	if input.Email != "" {
-		update["email"] = input.Email
-	}
-	if input.TotalMoneySpent != 0 {
-		update["total_money_spent"] = input.TotalMoneySpent
-	}
-
-	res, err := s.MongoDB.Collection.UpdateOne(r.Context(), filter, bson.M{"$set": update})
+	err = s.MongoDB.EditUser(input)
 	if err != nil {
 		fmt.Println(err.Error())
-		http.Error(w, "Failed to update user", http.StatusInternalServerError)
-		return
-	}
-
-	if res.MatchedCount == 0 {
-		http.Error(w, "User not found", http.StatusNotFound)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
@@ -93,10 +68,9 @@ func (s *Server) deleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filter := bson.M{"user_id": bson.M{"$eq": id}}
-	res := s.MongoDB.Collection.FindOneAndDelete(r.Context(), filter)
-	if res.Err() != nil {
-		if res.Err() == mongo.ErrNoDocuments {
+	err := s.MongoDB.DeleteUser(id)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
 			http.Error(w, "User not found", http.StatusNotFound)
 			return
 		}
@@ -116,22 +90,9 @@ func (s *Server) getUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filter := bson.M{"user_id": bson.M{"$eq": id}}
-	res := s.MongoDB.Collection.FindOne(r.Context(), filter)
-	if res.Err() != nil {
-		if res.Err() == mongo.ErrNoDocuments {
-			http.Error(w, "User not found", http.StatusNotFound)
-			return
-		}
-
-		http.Error(w, "Failed to get user", http.StatusInternalServerError)
-		return
-	}
-
-	var user m.User
-	err := res.Decode(&user)
+	user, err := s.MongoDB.GetUser(id)
 	if err != nil {
-		http.Error(w, "Failed to decode user", http.StatusInternalServerError)
+		http.Error(w, "Failed to get user", http.StatusInternalServerError)
 		return
 	}
 
@@ -147,17 +108,9 @@ func (s *Server) getUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) getAllUsers(w http.ResponseWriter, r *http.Request) {
-
-	res, err := s.MongoDB.Collection.Find(r.Context(), bson.M{})
+	users, err := s.MongoDB.GetAll()
 	if err != nil {
 		http.Error(w, "Failed to get users", http.StatusInternalServerError)
-		return
-	}
-
-	var users []m.User
-	err = res.All(r.Context(), &users)
-	if err != nil {
-		http.Error(w, "Failed to decode users", http.StatusInternalServerError)
 		return
 	}
 
