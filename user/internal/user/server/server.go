@@ -1,21 +1,23 @@
 package server
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/ciameksw/reserve-park/user/internal/user/config"
+	"github.com/ciameksw/reserve-park/user/internal/user/logger"
 	"github.com/ciameksw/reserve-park/user/internal/user/mongodb"
 	"github.com/gorilla/mux"
 )
 
 type Server struct {
+	Logger  *logger.Logger
 	Config  *config.Config
 	MongoDB *mongodb.MongoDB
 }
 
-func NewServer(cfg *config.Config, db *mongodb.MongoDB) *Server {
+func NewServer(log *logger.Logger, cfg *config.Config, db *mongodb.MongoDB) *Server {
 	return &Server{
+		Logger:  log,
 		Config:  cfg,
 		MongoDB: db,
 	}
@@ -31,9 +33,9 @@ func (s *Server) Start() {
 	r.HandleFunc("/users", s.getAllUsers).Methods("GET")
 
 	addr := s.Config.ServerHost + ":" + s.Config.ServerPort
-	log.Printf("Server started at %s\n", addr)
+	s.Logger.Info.Printf("Server started at %s\n", addr)
 	err := http.ListenAndServe(addr, r)
 	if err != nil {
-		log.Fatal(err)
+		s.Logger.Error.Fatalf("Failed to start server: %v", err)
 	}
 }
