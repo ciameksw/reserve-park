@@ -13,7 +13,7 @@ type MongoDB struct {
 	Collection *mongo.Collection
 }
 
-func Connect(uri string, db string) (*MongoDB, error) {
+func Connect(uri string, name string) (*MongoDB, error) {
 	client, err := mongo.NewClient(options.Client().ApplyURI(uri))
 	if err != nil {
 		return nil, err
@@ -32,7 +32,7 @@ func Connect(uri string, db string) (*MongoDB, error) {
 		return nil, err
 	}
 
-	return &MongoDB{Collection: client.Database(db).Collection(db)}, nil
+	return &MongoDB{Collection: client.Database(name).Collection(name)}, nil
 }
 
 func (m *MongoDB) Disconnect() {

@@ -15,7 +15,7 @@ func main() {
 	cfg := config.GetConfig()
 
 	// Connect to MongoDB
-	db, err := mongodb.Connect(cfg.MongoURI, "users") //TODO think about db and collection
+	db, err := mongodb.Connect(cfg.MongoURI, "users")
 	if err != nil {
 		lgr.Error.Fatalf("Failed to connect to MongoDB: %v", err)
 	}
