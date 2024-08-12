@@ -3,7 +3,6 @@ package server
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -84,7 +83,6 @@ func TestGetAllUsers(t *testing.T) {
 		t.Errorf("handler returned wrong number of users: got %v want %v", len(interfaceSlice), 1)
 	}
 
-	fmt.Print(interfaceSlice[0].(map[string]interface{})["user_id"].(string))
 	userID = interfaceSlice[0].(map[string]interface{})["user_id"].(string)
 }
 
