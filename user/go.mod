@@ -8,6 +8,12 @@ require (
 )
 
 require (
+	github.com/acobaugh/osrelease v0.0.0-20181218015638-a93a0a55a249 // indirect
+	github.com/spf13/afero v1.2.1 // indirect
+)
+
+require (
+	github.com/benweissmann/memongo v0.1.1
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect
