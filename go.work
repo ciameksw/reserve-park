@@ -1,5 +1,6 @@
 go 1.22
 
 use (
-    ./user
+	./spot
+	./user
 )

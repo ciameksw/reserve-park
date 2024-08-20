@@ -7,8 +7,11 @@ import (
 
 func main() {
 	// Get logger
-	lgr := logger.GetLogger()
+	_ = logger.GetLogger()
 
 	// Get config
-	cfg := config.GetConfig()
+	_ = config.GetConfig()
+
+	// Connect to MongoDB
+	// TODO
 }
