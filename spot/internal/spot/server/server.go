@@ -26,7 +26,11 @@ func NewServer(log *logger.Logger, cfg *config.Config, db *mongodb.MongoDB) *Ser
 func (s *Server) Start() {
 	r := mux.NewRouter()
 
-	// TODO
+	r.HandleFunc("/spots", s.addSpot).Methods("POST")
+	r.HandleFunc("/spots", s.editSpot).Methods("PUT")
+	r.HandleFunc("/spots/{id}", s.deleteSpot).Methods("DELETE")
+	r.HandleFunc("/spots/{id}", s.getSpot).Methods("GET")
+	r.HandleFunc("/spots", s.getAllSpots).Methods("GET")
 
 	addr := s.Config.ServerHost + ":" + s.Config.ServerPort
 	s.Logger.Info.Printf("Server started at %s\n", addr)
