@@ -11,8 +11,8 @@ import (
 type Spot struct {
 	ID           primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
 	SpotID       string             `json:"spot_id" bson:"spot_id"`
-	Latitude     string             `json:"latitude" bson:"latitude"`
-	Longitude    string             `json:"longitude" bson:"longitude"`
+	Latitude     float64            `json:"latitude" bson:"latitude"`
+	Longitude    float64            `json:"longitude" bson:"longitude"`
 	PricePerHour float64            `json:"price_per_hour" bson:"price_per_hour"`
 }
 
@@ -28,7 +28,7 @@ func (m *MongoDB) EditSpot(input Spot) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	filter := bson.M{"user_id": bson.M{"$eq": input.SpotID}}
+	filter := bson.M{"spot_id": bson.M{"$eq": input.SpotID}}
 
 	res := m.Collection.FindOneAndReplace(ctx, filter, input)
 	return res.Err()
