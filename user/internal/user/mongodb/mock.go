@@ -16,15 +16,10 @@ func ConnectMock() (*MongoDB, error) {
 	}
 
 	clientOptions := options.Client().ApplyURI(mongoServer.URI())
-	client, err := mongo.NewClient(clientOptions)
-	if err != nil {
-		return nil, err
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	err = client.Connect(ctx)
+	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
 		return nil, err
 	}

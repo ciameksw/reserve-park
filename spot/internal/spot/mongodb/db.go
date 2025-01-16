@@ -14,15 +14,10 @@ type MongoDB struct {
 }
 
 func Connect(uri string, name string) (*MongoDB, error) {
-	client, err := mongo.NewClient(options.Client().ApplyURI(uri))
-	if err != nil {
-		return nil, err
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	err = client.Connect(ctx)
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
 	if err != nil {
 		return nil, err
 	}
