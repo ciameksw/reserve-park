@@ -26,7 +26,11 @@ func NewServer(log *logger.Logger, cfg *config.Config, db *mongodb.MongoDB) *Ser
 func (s *Server) Start() {
 	r := mux.NewRouter()
 
-	// TODO: Add routes here
+	r.HandleFunc("/reservations", s.addReservation).Methods("POST")
+	r.HandleFunc("/reservations", s.editReservation).Methods("PUT")
+	r.HandleFunc("/reservations/{id}", s.deleteReservation).Methods("DELETE")
+	r.HandleFunc("/reservations/{id}", s.getReservation).Methods("GET")
+	r.HandleFunc("/reservations", s.getAllReservations).Methods("GET")
 
 	addr := s.Config.ServerHost + ":" + s.Config.ServerPort
 	s.Logger.Info.Printf("Server started at %s\n", addr)
