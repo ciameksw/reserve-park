@@ -135,11 +135,11 @@ func TestDeleteUser(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	router := mux.NewRouter()
-	router.HandleFunc("/users/{id}", s.getUser).Methods("DELETE")
+	router.HandleFunc("/users/{id}", s.deleteUser).Methods("DELETE")
 
 	router.ServeHTTP(rr, req)
 
-	if status := rr.Code; status != http.StatusOK {
+	if status := rr.Code; status != http.StatusNoContent {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 }
