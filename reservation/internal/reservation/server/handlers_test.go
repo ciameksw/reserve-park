@@ -12,7 +12,6 @@ import (
 	"github.com/ciameksw/reserve-park/reservation/internal/reservation/config"
 	"github.com/ciameksw/reserve-park/reservation/internal/reservation/logger"
 	"github.com/ciameksw/reserve-park/reservation/internal/reservation/mongodb"
-	m "github.com/ciameksw/reserve-park/reservation/internal/reservation/mongodb"
 	"github.com/gorilla/mux"
 )
 
@@ -76,7 +75,7 @@ func TestGetAllReservations(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	var reservations []m.Reservation
+	var reservations []mongodb.Reservation
 	err = json.NewDecoder(rr.Body).Decode(&reservations)
 	if err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
@@ -108,7 +107,7 @@ func TestGetUser(t *testing.T) {
 }
 
 func TestEditReservation(t *testing.T) {
-	input := m.Reservation{
+	input := mongodb.Reservation{
 		ReservationID: reservationID,
 		UserID:        "54321",
 		SpotID:        "54321",

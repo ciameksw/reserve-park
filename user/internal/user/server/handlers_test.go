@@ -11,7 +11,6 @@ import (
 	"github.com/ciameksw/reserve-park/user/internal/user/config"
 	"github.com/ciameksw/reserve-park/user/internal/user/logger"
 	"github.com/ciameksw/reserve-park/user/internal/user/mongodb"
-	m "github.com/ciameksw/reserve-park/user/internal/user/mongodb"
 	"github.com/gorilla/mux"
 )
 
@@ -105,7 +104,7 @@ func TestGetUser(t *testing.T) {
 }
 
 func TestEditUser(t *testing.T) {
-	input := m.User{
+	input := mongodb.User{
 		UserID:   userID,
 		Username: "editeduser",
 		Email:    "test@example.com",
