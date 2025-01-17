@@ -16,6 +16,7 @@ func ConnectMock() (*MongoDB, error) {
 	}
 
 	clientOptions := options.Client().ApplyURI(mongoServer.URI())
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
