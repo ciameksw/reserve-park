@@ -7,15 +7,16 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
-	"github.com/ciameksw/reserve-park/spot/internal/spot/config"
-	"github.com/ciameksw/reserve-park/spot/internal/spot/logger"
-	"github.com/ciameksw/reserve-park/spot/internal/spot/mongodb"
+	"github.com/ciameksw/reserve-park/reservation/internal/reservation/config"
+	"github.com/ciameksw/reserve-park/reservation/internal/reservation/logger"
+	"github.com/ciameksw/reserve-park/reservation/internal/reservation/mongodb"
 	"github.com/gorilla/mux"
 )
 
 var s *Server
-var spotID string
+var reservationID string
 
 func TestMain(m *testing.M) {
 	// Get logger
@@ -36,20 +37,21 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func TestAddSpot(t *testing.T) {
+func TestAddReservation(t *testing.T) {
 	input := addInput{
-		Latitude:     34.7365,
-		Longitude:    -86.8271,
-		PricePerHour: 5.00,
+		UserID: "12345",
+		SpotID: "12345",
+		Start:  time.Now(),
+		End:    time.Now().Add(time.Hour),
 	}
 	body, _ := json.Marshal(input)
-	req, err := http.NewRequest("POST", "/spots", bytes.NewBuffer(body))
+	req, err := http.NewRequest("POST", "/reservations", bytes.NewBuffer(body))
 	if err != nil {
 		t.Fatalf("Failed to create request: %v", err)
 	}
 
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(s.addSpot)
+	handler := http.HandlerFunc(s.addReservation)
 
 	handler.ServeHTTP(rr, req)
 
@@ -58,14 +60,14 @@ func TestAddSpot(t *testing.T) {
 	}
 }
 
-func TestGetAllSpots(t *testing.T) {
-	req, err := http.NewRequest("GET", "/spots", nil)
+func TestGetAllReservations(t *testing.T) {
+	req, err := http.NewRequest("GET", "/reservations", nil)
 	if err != nil {
 		t.Fatalf("Failed to create request: %v", err)
 	}
 
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(s.getAllSpots)
+	handler := http.HandlerFunc(s.getAllReservations)
 
 	handler.ServeHTTP(rr, req)
 
@@ -73,21 +75,21 @@ func TestGetAllSpots(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	var interfaceSlice []interface{}
-	err = json.Unmarshal(rr.Body.Bytes(), &interfaceSlice)
+	var reservations []mongodb.Reservation
+	err = json.NewDecoder(rr.Body).Decode(&reservations)
 	if err != nil {
-		t.Fatalf("Failed to unmarshal response: %v", err)
+		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	if len(interfaceSlice) != 1 {
-		t.Errorf("handler returned wrong number of spots: got %v want %v", len(interfaceSlice), 1)
+	if len(reservations) != 1 {
+		t.Errorf("handler returned wrong number of reservations: got %v want %v", len(reservations), 1)
 	}
 
-	spotID = interfaceSlice[0].(map[string]interface{})["spot_id"].(string)
+	reservationID = reservations[0].ReservationID
 }
 
-func TestGetSpot(t *testing.T) {
-	req, err := http.NewRequest("GET", "/spots/"+spotID, nil)
+func TestGetUser(t *testing.T) {
+	req, err := http.NewRequest("GET", "/reservations/"+reservationID, nil)
 	if err != nil {
 		t.Fatalf("Failed to create request: %v", err)
 	}
@@ -95,7 +97,7 @@ func TestGetSpot(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	router := mux.NewRouter()
-	router.HandleFunc("/spots/{id}", s.getSpot).Methods("GET")
+	router.HandleFunc("/reservations/{id}", s.getReservation).Methods("GET")
 
 	router.ServeHTTP(rr, req)
 
@@ -104,20 +106,23 @@ func TestGetSpot(t *testing.T) {
 	}
 }
 
-func TestEditUser(t *testing.T) {
-	input := mongodb.Spot{
-		SpotID:    spotID,
-		Latitude:  -34.7365,
-		Longitude: 86.8271,
+func TestEditReservation(t *testing.T) {
+	input := mongodb.Reservation{
+		ReservationID: reservationID,
+		UserID:        "54321",
+		SpotID:        "54321",
+		Start:         time.Now(),
+		End:           time.Now().Add(time.Hour),
+		Canceled:      true,
 	}
 	body, _ := json.Marshal(input)
-	req, err := http.NewRequest("PUT", "/spots", bytes.NewBuffer(body))
+	req, err := http.NewRequest("PUT", "/reservations", bytes.NewBuffer(body))
 	if err != nil {
 		t.Fatalf("Failed to create request: %v", err)
 	}
 
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(s.editSpot)
+	handler := http.HandlerFunc(s.editReservation)
 
 	handler.ServeHTTP(rr, req)
 
@@ -126,8 +131,8 @@ func TestEditUser(t *testing.T) {
 	}
 }
 
-func TestDeleteUser(t *testing.T) {
-	req, err := http.NewRequest("DELETE", "/spots/"+spotID, nil)
+func TestDeleteReservation(t *testing.T) {
+	req, err := http.NewRequest("DELETE", "/reservations/"+reservationID, nil)
 	if err != nil {
 		t.Fatalf("Failed to create request: %v", err)
 	}
@@ -135,7 +140,7 @@ func TestDeleteUser(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	router := mux.NewRouter()
-	router.HandleFunc("/spots/{id}", s.deleteSpot).Methods("DELETE")
+	router.HandleFunc("/reservations/{id}", s.deleteReservation).Methods("DELETE")
 
 	router.ServeHTTP(rr, req)
 

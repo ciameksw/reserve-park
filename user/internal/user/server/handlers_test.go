@@ -11,7 +11,6 @@ import (
 	"github.com/ciameksw/reserve-park/user/internal/user/config"
 	"github.com/ciameksw/reserve-park/user/internal/user/logger"
 	"github.com/ciameksw/reserve-park/user/internal/user/mongodb"
-	m "github.com/ciameksw/reserve-park/user/internal/user/mongodb"
 	"github.com/gorilla/mux"
 )
 
@@ -105,7 +104,7 @@ func TestGetUser(t *testing.T) {
 }
 
 func TestEditUser(t *testing.T) {
-	input := m.User{
+	input := mongodb.User{
 		UserID:   userID,
 		Username: "editeduser",
 		Email:    "test@example.com",
@@ -135,11 +134,11 @@ func TestDeleteUser(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	router := mux.NewRouter()
-	router.HandleFunc("/users/{id}", s.getUser).Methods("DELETE")
+	router.HandleFunc("/users/{id}", s.deleteUser).Methods("DELETE")
 
 	router.ServeHTTP(rr, req)
 
-	if status := rr.Code; status != http.StatusOK {
+	if status := rr.Code; status != http.StatusNoContent {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 }

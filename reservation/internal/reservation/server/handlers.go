@@ -3,21 +3,23 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
-	m "github.com/ciameksw/reserve-park/spot/internal/spot/mongodb"
+	m "github.com/ciameksw/reserve-park/reservation/internal/reservation/mongodb"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type addInput struct {
-	Latitude     float64 `json:"latitude"`
-	Longitude    float64 `json:"longitude"`
-	PricePerHour float64 `json:"price_per_hour"`
+	UserID string    `json:"user_id"`
+	SpotID string    `json:"spot_id"`
+	Start  time.Time `json:"start"`
+	End    time.Time `json:"end"`
 }
 
-func (s *Server) addSpot(w http.ResponseWriter, r *http.Request) {
-	s.Logger.Info.Println("Adding spot")
+func (s *Server) addReservation(w http.ResponseWriter, r *http.Request) {
+	s.Logger.Info.Println("Adding reservation")
 	var input addInput
 
 	err := json.NewDecoder(r.Body).Decode(&input)
@@ -28,28 +30,30 @@ func (s *Server) addSpot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := m.Spot{
-		SpotID:       uuid.NewString(),
-		Latitude:     input.Latitude,
-		Longitude:    input.Longitude,
-		PricePerHour: input.PricePerHour,
+	data := m.Reservation{
+		ReservationID: uuid.NewString(),
+		UserID:        input.UserID,
+		SpotID:        input.SpotID,
+		Start:         input.Start,
+		End:           input.End,
+		Canceled:      false,
 	}
 
-	err = s.MongoDB.AddSpot(data)
+	err = s.MongoDB.AddReservation(data)
 	if err != nil {
-		msg := "Failed to add spot to MongoDB"
+		msg := "Failed to add reservation to MongoDB"
 		s.Logger.Error.Printf("%s: %v", msg, err)
 		http.Error(w, msg, http.StatusInternalServerError)
 		return
 	}
 
-	s.Logger.Info.Printf("Spot added: %v", data.SpotID)
+	s.Logger.Info.Printf("Reservation added: %v", data.ReservationID)
 	w.WriteHeader(http.StatusCreated)
 }
 
-func (s *Server) editSpot(w http.ResponseWriter, r *http.Request) {
-	s.Logger.Info.Println("Editing spot")
-	var input m.Spot
+func (s *Server) editReservation(w http.ResponseWriter, r *http.Request) {
+	s.Logger.Info.Println("Editing reservation")
+	var input m.Reservation
 
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
@@ -59,101 +63,100 @@ func (s *Server) editSpot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.MongoDB.EditSpot(input)
+	err = s.MongoDB.EditReservation(input)
 	if err != nil {
-		msg := "Failed to edit spot in MongoDB"
+		msg := "Failed to edit reservation in MongoDB"
 		s.Logger.Error.Printf("%s: %v", msg, err)
 		http.Error(w, msg, http.StatusInternalServerError)
 		return
 	}
 
-	s.Logger.Info.Printf("Spot edited: %v", input.SpotID)
+	s.Logger.Info.Printf("Reservation edited: %v", input.ReservationID)
 	w.WriteHeader(http.StatusOK)
 }
 
-func (s *Server) deleteSpot(w http.ResponseWriter, r *http.Request) {
-	s.Logger.Info.Println("Deleting spot")
+func (s *Server) deleteReservation(w http.ResponseWriter, r *http.Request) {
+	s.Logger.Info.Println("Deleting reservation")
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
-		msg := "Spot ID not provided"
+		msg := "Missing reservation ID"
 		s.Logger.Error.Println(msg)
 		http.Error(w, msg, http.StatusBadRequest)
 		return
 	}
 
-	err := s.MongoDB.DeleteSpot(id)
+	err := s.MongoDB.DeleteReservation(id)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			msg := "Spot not found"
-			s.Logger.Error.Println(msg)
+			msg := "Reservation not found"
+			s.Logger.Error.Printf("%s: %v", msg, id)
 			http.Error(w, msg, http.StatusNotFound)
 			return
 		}
 
-		msg := "Failed to delete spot"
+		msg := "Failed to delete reservation"
 		s.Logger.Error.Printf("%s: %v", msg, err)
 		http.Error(w, msg, http.StatusInternalServerError)
 		return
 	}
 
-	s.Logger.Info.Printf("Spot deleted: %v", id)
+	s.Logger.Info.Printf("Reservation deleted: %v", id)
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (s *Server) getSpot(w http.ResponseWriter, r *http.Request) {
-	s.Logger.Info.Println("Getting spot")
+func (s *Server) getReservation(w http.ResponseWriter, r *http.Request) {
+	s.Logger.Info.Println("Getting reservation")
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
-		msg := "Spot ID not provided"
+		msg := "Missing reservation ID"
 		s.Logger.Error.Println(msg)
 		http.Error(w, msg, http.StatusBadRequest)
 		return
 	}
 
-	spot, err := s.MongoDB.GetSpot(id)
+	reservation, err := s.MongoDB.GetReservation(id)
 	if err != nil {
-		msg := "Failed to get spot"
+		msg := "Failed to get reservation from MongoDB"
 		s.Logger.Error.Printf("%s: %v", msg, err)
 		http.Error(w, msg, http.StatusInternalServerError)
 		return
 	}
 
-	j, err := json.Marshal(spot)
+	j, err := json.Marshal(reservation)
 	if err != nil {
-		msg := "Failed to encode spot to JSON"
+		msg := "Failed to encode reservation to JSON"
 		s.Logger.Error.Printf("%s: %v", msg, err)
 		http.Error(w, msg, http.StatusInternalServerError)
 		return
 	}
 
-	s.Logger.Info.Printf("Spot found: %v", id)
+	s.Logger.Info.Printf("User found: %v", reservation.ReservationID)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(j)
 }
 
-func (s *Server) getAllSpots(w http.ResponseWriter, r *http.Request) {
-	s.Logger.Info.Println("Getting all spots")
-
-	spots, err := s.MongoDB.GetAll()
+func (s *Server) getAllReservations(w http.ResponseWriter, r *http.Request) {
+	s.Logger.Info.Println("Getting all reservations")
+	reservations, err := s.MongoDB.GetAll()
 	if err != nil {
-		msg := "Failed to get all spots"
+		msg := "Failed to get reservations"
 		s.Logger.Error.Printf("%s: %v", msg, err)
 		http.Error(w, msg, http.StatusInternalServerError)
 		return
 	}
 
-	j, err := json.Marshal(spots)
+	j, err := json.Marshal(reservations)
 	if err != nil {
-		msg := "Failed to encode spots to JSON"
+		msg := "Failed to encode reservations to JSON"
 		s.Logger.Error.Printf("%s: %v", msg, err)
 		http.Error(w, msg, http.StatusInternalServerError)
 		return
 	}
 
-	s.Logger.Info.Printf("Spots found: %v", len(spots))
+	s.Logger.Info.Printf("Reservations found: %v", len(reservations))
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(j)
