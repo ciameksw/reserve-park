@@ -72,17 +72,17 @@ func TestGetAllUsers(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	var interfaceSlice []interface{}
-	err = json.Unmarshal(rr.Body.Bytes(), &interfaceSlice)
+	var users []mongodb.User
+	err = json.NewDecoder(rr.Body).Decode(&users)
 	if err != nil {
-		t.Fatalf("Failed to unmarshal response: %v", err)
+		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	if len(interfaceSlice) != 1 {
-		t.Errorf("handler returned wrong number of users: got %v want %v", len(interfaceSlice), 1)
+	if len(users) != 1 {
+		t.Errorf("handler returned wrong number of users: got %v want %v", len(users), 1)
 	}
 
-	userID = interfaceSlice[0].(map[string]interface{})["user_id"].(string)
+	userID = users[0].UserID
 }
 
 func TestGetUser(t *testing.T) {

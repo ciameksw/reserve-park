@@ -73,17 +73,17 @@ func TestGetAllSpots(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	var interfaceSlice []interface{}
-	err = json.Unmarshal(rr.Body.Bytes(), &interfaceSlice)
+	var spots []mongodb.Spot
+	err = json.NewDecoder(rr.Body).Decode(&spots)
 	if err != nil {
-		t.Fatalf("Failed to unmarshal response: %v", err)
+		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	if len(interfaceSlice) != 1 {
-		t.Errorf("handler returned wrong number of spots: got %v want %v", len(interfaceSlice), 1)
+	if len(spots) != 1 {
+		t.Errorf("handler returned wrong number of spots: got %v want %v", len(spots), 1)
 	}
 
-	spotID = interfaceSlice[0].(map[string]interface{})["spot_id"].(string)
+	spotID = spots[0].SpotID
 }
 
 func TestGetSpot(t *testing.T) {
