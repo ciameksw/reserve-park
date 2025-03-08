@@ -1,8 +1,47 @@
 services:
   mongodb:
     image: mongo:latest
+    container_name: mongodb
     ports:
         - target: 27017
           published: 27017
           protocol: tcp
           mode: host
+  user:
+    build: ./user
+    container_name: user
+    ports:
+        - target: 3001
+          published: 3001
+          protocol: tcp
+          mode: host
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=3001
+
+  spot:
+    build: ./spot
+    container_name: spot
+    ports:
+        - target: 3002
+          published: 3002
+          protocol: tcp
+          mode: host
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=3002
+
+  reservation:
+    build: ./reservation
+    container_name: reservation
+    ports:
+        - target: 3003
+          published: 3003
+          protocol: tcp
+          mode: host
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=3003
