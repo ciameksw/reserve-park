@@ -111,9 +111,11 @@ func TestEditReservation(t *testing.T) {
 		ReservationID: reservationID,
 		UserID:        "54321",
 		SpotID:        "54321",
-		Start:         time.Now(),
-		End:           time.Now().Add(time.Hour),
-		Canceled:      true,
+		StartTime:     time.Now(),
+		EndTime:       time.Now().Add(time.Hour),
+		Status:        "active",
+		PricePaid:     10.0,
+		CreateAt:      time.Now(),
 	}
 	body, _ := json.Marshal(input)
 	req, err := http.NewRequest("PUT", "/reservations", bytes.NewBuffer(body))
@@ -126,8 +128,64 @@ func TestEditReservation(t *testing.T) {
 
 	handler.ServeHTTP(rr, req)
 
+	if status := rr.Code; status != http.StatusNoContent {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNoContent)
+	}
+}
+
+func TestGetReservationsByUser(t *testing.T) {
+	req, err := http.NewRequest("GET", "/reservations/user/54321", nil)
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	router := mux.NewRouter()
+	router.HandleFunc("/reservations/user/{id}", s.getUserReservations).Methods("GET")
+
+	router.ServeHTTP(rr, req)
+
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var reservations []mongodb.Reservation
+	err = json.NewDecoder(rr.Body).Decode(&reservations)
+	if err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if len(reservations) != 1 {
+		t.Errorf("handler returned wrong number of reservations: got %v want %v", len(reservations), 1)
+	}
+}
+
+func TestGetReservationsBySpot(t *testing.T) {
+	req, err := http.NewRequest("GET", "/reservations/spot/54321", nil)
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	router := mux.NewRouter()
+	router.HandleFunc("/reservations/spot/{id}", s.getSpotReservations).Methods("GET")
+
+	router.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var reservations []mongodb.Reservation
+	err = json.NewDecoder(rr.Body).Decode(&reservations)
+	if err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if len(reservations) != 1 {
+		t.Errorf("handler returned wrong number of reservations: got %v want %v", len(reservations), 1)
 	}
 }
 
