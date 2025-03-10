@@ -8,14 +8,23 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+type StatusType string
+
+const (
+	StatusValid    StatusType = "valid"
+	StatusCanceled StatusType = "canceled"
+)
+
 type Reservation struct {
 	ID            primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
 	ReservationID string             `json:"reservation_id" bson:"reservation_id"`
 	UserID        string             `json:"user_id" bson:"user_id"`
 	SpotID        string             `json:"spot_id" bson:"spot_id"`
-	Start         time.Time          `json:"start" bson:"start"`
-	End           time.Time          `json:"end" bson:"end"`
-	Canceled      bool               `json:"canceled" bson:"canceled"`
+	StartTime     time.Time          `json:"start_time" bson:"start_time"`
+	EndTime       time.Time          `json:"end_time" bson:"end_time"`
+	Status        StatusType         `json:"status" bson:"status"`
+	PricePaid     float64            `json:"price_paid" bson:"price_paid"`
+	CreateAt      time.Time          `json:"created_at" bson:"created_at"`
 }
 
 func (m *MongoDB) AddReservation(reservation Reservation) error {
@@ -66,6 +75,29 @@ func (m *MongoDB) GetAll() ([]Reservation, error) {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
+
+	var reservations []Reservation
+	err = cursor.All(ctx, &reservations)
+	return reservations, err
+}
+
+type parameterInput string
+
+const (
+	ByUserID parameterInput = "user_id"
+	BySpotID parameterInput = "spot_id"
+)
+
+func (m *MongoDB) GetReservationsBy(parameter parameterInput, id string) ([]Reservation, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	filter := bson.M{string(parameter): bson.M{"$eq": id}}
+
+	cursor, err := m.Collection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
 
 	var reservations []Reservation
 	err = cursor.All(ctx, &reservations)
