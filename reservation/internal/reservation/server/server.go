@@ -32,6 +32,9 @@ func (s *Server) Start() {
 	r.HandleFunc("/reservations/{id}", s.getReservation).Methods("GET")
 	r.HandleFunc("/reservations", s.getAllReservations).Methods("GET")
 
+	r.HandleFunc("/reservations/user/{id}", s.getUserReservations).Methods("GET")
+	r.HandleFunc("/reservations/spot/{id}", s.getSpotReservations).Methods("GET")
+
 	addr := s.Config.ServerHost + ":" + s.Config.ServerPort
 	s.Logger.Info.Printf("Server started at %s\n", addr)
 	err := http.ListenAndServe(addr, r)
