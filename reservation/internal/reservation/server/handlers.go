@@ -46,6 +46,8 @@ func (s *Server) addReservation(w http.ResponseWriter, r *http.Request) {
 		CreateAt:      input.CreateAt,
 	}
 
+	// TODO: should we check if the spot is available here?
+
 	err = s.MongoDB.AddReservation(data)
 	if err != nil {
 		msg := "Failed to add reservation to MongoDB"
@@ -72,6 +74,13 @@ func (s *Server) editReservation(w http.ResponseWriter, r *http.Request) {
 
 	err = s.MongoDB.EditReservation(input)
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			msg := "Reservation not found"
+			s.Logger.Error.Printf("%s: %v", msg, input.ReservationID)
+			http.Error(w, msg, http.StatusNotFound)
+			return
+		}
+
 		msg := "Failed to edit reservation in MongoDB"
 		s.Logger.Error.Printf("%s: %v", msg, err)
 		http.Error(w, msg, http.StatusInternalServerError)
@@ -79,7 +88,7 @@ func (s *Server) editReservation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.Logger.Info.Printf("Reservation edited: %v", input.ReservationID)
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s *Server) deleteReservation(w http.ResponseWriter, r *http.Request) {
@@ -170,7 +179,7 @@ func (s *Server) getAllReservations(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.Logger.Info.Printf("Reservations found: %v", len(reservations))
+	s.Logger.Info.Printf("Reservations found: %v documents", len(reservations))
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(j)
