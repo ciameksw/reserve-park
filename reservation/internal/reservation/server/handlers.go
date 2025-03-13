@@ -14,8 +14,6 @@ import (
 type addInput struct {
 	UserID    string       `json:"user_id"`
 	SpotID    string       `json:"spot_id"`
-	Start     time.Time    `json:"start"`
-	End       time.Time    `json:"end"`
 	StartTime time.Time    `json:"start_time"`
 	EndTime   time.Time    `json:"end_time"`
 	Status    m.StatusType `json:"status"`
@@ -29,9 +27,7 @@ func (s *Server) addReservation(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
-		msg := "Failed to decode request body"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusBadRequest)
+		s.handleError(w, "Failed to decode request body", err, http.StatusBadRequest)
 		return
 	}
 
@@ -50,9 +46,7 @@ func (s *Server) addReservation(w http.ResponseWriter, r *http.Request) {
 
 	err = s.MongoDB.AddReservation(data)
 	if err != nil {
-		msg := "Failed to add reservation to MongoDB"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusInternalServerError)
+		s.handleError(w, "Failed to add reservation to MongoDB", err, http.StatusInternalServerError)
 		return
 	}
 
@@ -66,24 +60,18 @@ func (s *Server) editReservation(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
-		msg := "Failed to decode request body"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusBadRequest)
+		s.handleError(w, "Failed to decode request body", err, http.StatusBadRequest)
 		return
 	}
 
 	err = s.MongoDB.EditReservation(input)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			msg := "Reservation not found"
-			s.Logger.Error.Printf("%s: %v", msg, input.ReservationID)
-			http.Error(w, msg, http.StatusNotFound)
+			s.handleError(w, "Reservation not found", err, http.StatusNotFound)
 			return
 		}
 
-		msg := "Failed to edit reservation in MongoDB"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusInternalServerError)
+		s.handleError(w, "Failed to edit reservation in MongoDB", err, http.StatusInternalServerError)
 		return
 	}
 
@@ -96,24 +84,18 @@ func (s *Server) deleteReservation(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
-		msg := "Missing reservation ID"
-		s.Logger.Error.Println(msg)
-		http.Error(w, msg, http.StatusBadRequest)
+		s.handleError(w, "Missing reservation ID", nil, http.StatusBadRequest)
 		return
 	}
 
 	err := s.MongoDB.DeleteReservation(id)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			msg := "Reservation not found"
-			s.Logger.Error.Printf("%s: %v", msg, id)
-			http.Error(w, msg, http.StatusNotFound)
+			s.handleError(w, "Reservation not found", err, http.StatusNotFound)
 			return
 		}
 
-		msg := "Failed to delete reservation"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusInternalServerError)
+		s.handleError(w, "Failed to delete reservation", err, http.StatusInternalServerError)
 		return
 	}
 
@@ -126,63 +108,41 @@ func (s *Server) getReservation(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
-		msg := "Missing reservation ID"
-		s.Logger.Error.Println(msg)
-		http.Error(w, msg, http.StatusBadRequest)
+		s.handleError(w, "Missing reservation ID", nil, http.StatusBadRequest)
 		return
 	}
 
 	reservation, err := s.MongoDB.GetReservation(id)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			msg := "Reservation not found"
-			s.Logger.Error.Printf("%s: %v", msg, id)
-			http.Error(w, msg, http.StatusNotFound)
+			s.handleError(w, "Reservation not found", err, http.StatusNotFound)
 			return
 		}
 
-		msg := "Failed to get reservation from MongoDB"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusInternalServerError)
-		return
-	}
-
-	j, err := json.Marshal(reservation)
-	if err != nil {
-		msg := "Failed to encode reservation to JSON"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusInternalServerError)
+		s.handleError(w, "Failed to get reservation from MongoDB", err, http.StatusInternalServerError)
 		return
 	}
 
 	s.Logger.Info.Printf("Reservation found: %v", reservation.ReservationID)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(j)
+	s.writeJSON(w, reservation, http.StatusOK)
 }
 
 func (s *Server) getAllReservations(w http.ResponseWriter, r *http.Request) {
 	s.Logger.Info.Println("Getting all reservations")
 	reservations, err := s.MongoDB.GetAll()
 	if err != nil {
-		msg := "Failed to get reservations"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusInternalServerError)
+		s.handleError(w, "Failed to get reservations", err, http.StatusInternalServerError)
 		return
 	}
 
-	j, err := json.Marshal(reservations)
-	if err != nil {
-		msg := "Failed to encode reservations to JSON"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusInternalServerError)
+	if len(reservations) == 0 {
+		s.Logger.Info.Println("No reservations found")
+		s.writeJSON(w, []m.Reservation{}, http.StatusOK)
 		return
 	}
 
 	s.Logger.Info.Printf("Reservations found: %v documents", len(reservations))
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(j)
+	s.writeJSON(w, reservations, http.StatusOK)
 }
 
 func (s *Server) getUserReservations(w http.ResponseWriter, r *http.Request) {
@@ -190,39 +150,29 @@ func (s *Server) getUserReservations(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
-		msg := "Missing user ID"
-		s.Logger.Error.Println(msg)
-		http.Error(w, msg, http.StatusBadRequest)
+		s.handleError(w, "Missing user ID", nil, http.StatusBadRequest)
 		return
 	}
 
 	reservations, err := s.MongoDB.GetReservationsBy("user_id", id)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			msg := "Reservations not found"
-			s.Logger.Error.Printf("%s: %v", msg, id)
-			http.Error(w, msg, http.StatusNotFound)
+			s.handleError(w, "Reservations not found", err, http.StatusNotFound)
 			return
 		}
 
-		msg := "Failed to get reservations from MongoDB"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusInternalServerError)
+		s.handleError(w, "Failed to get reservations from MongoDB", err, http.StatusInternalServerError)
 		return
 	}
 
-	j, err := json.Marshal(reservations)
-	if err != nil {
-		msg := "Failed to encode reservations to JSON"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusInternalServerError)
+	if len(reservations) == 0 {
+		s.Logger.Info.Println("No reservations found")
+		s.writeJSON(w, []m.Reservation{}, http.StatusOK)
 		return
 	}
 
 	s.Logger.Info.Printf("Reservations found: %v documents", len(reservations))
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(j)
+	s.writeJSON(w, reservations, http.StatusOK)
 }
 
 func (s *Server) getSpotReservations(w http.ResponseWriter, r *http.Request) {
@@ -230,37 +180,50 @@ func (s *Server) getSpotReservations(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
-		msg := "Missing spot ID"
-		s.Logger.Error.Println(msg)
-		http.Error(w, msg, http.StatusBadRequest)
+		s.handleError(w, "Missing spot ID", nil, http.StatusBadRequest)
 		return
 	}
 
 	reservations, err := s.MongoDB.GetReservationsBy("spot_id", id)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			msg := "Reservations not found"
-			s.Logger.Error.Printf("%s: %v", msg, id)
-			http.Error(w, msg, http.StatusNotFound)
+			s.handleError(w, "Reservations not found", err, http.StatusNotFound)
 			return
 		}
 
-		msg := "Failed to get reservations from MongoDB"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusInternalServerError)
+		s.handleError(w, "Failed to get reservations from MongoDB", err, http.StatusInternalServerError)
 		return
 	}
 
-	j, err := json.Marshal(reservations)
-	if err != nil {
-		msg := "Failed to encode reservations to JSON"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusInternalServerError)
+	if len(reservations) == 0 {
+		s.Logger.Info.Println("No reservations found")
+		s.writeJSON(w, []m.Reservation{}, http.StatusOK)
 		return
 	}
 
 	s.Logger.Info.Printf("Reservations found: %v documents", len(reservations))
+	s.writeJSON(w, reservations, http.StatusOK)
+}
+
+// Helper function to handle errors
+func (s *Server) handleError(w http.ResponseWriter, message string, err error, statusCode int) {
+	if err != nil {
+		s.Logger.Error.Printf("%s: %v", message, err)
+	} else {
+		s.Logger.Error.Println(message)
+	}
+	http.Error(w, message, statusCode)
+}
+
+// Helper function to write JSON responses
+func (s *Server) writeJSON(w http.ResponseWriter, data interface{}, statusCode int) {
+	j, err := json.Marshal(data)
+	if err != nil {
+		s.handleError(w, "Failed to encode response to JSON", err, http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(statusCode)
 	w.Write(j)
 }
