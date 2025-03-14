@@ -75,6 +75,8 @@ func (s *Server) editReservation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// TODO: should we check if the spot is available here?
+
 	err = s.MongoDB.EditReservation(input)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
