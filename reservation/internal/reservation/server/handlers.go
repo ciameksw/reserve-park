@@ -57,6 +57,7 @@ func (s *Server) addReservation(w http.ResponseWriter, r *http.Request) {
 
 	s.Logger.Info.Printf("Reservation added: %v", data.ReservationID)
 	w.WriteHeader(http.StatusCreated)
+	w.Write([]byte(data.ReservationID))
 }
 
 func (s *Server) editReservation(w http.ResponseWriter, r *http.Request) {
