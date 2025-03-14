@@ -42,6 +42,11 @@ func (s *Server) addReservation(w http.ResponseWriter, r *http.Request) {
 		CreateAt:      input.CreateAt,
 	}
 
+	if err := s.Validator.Struct(data); err != nil {
+		s.handleError(w, err.Error(), err, http.StatusBadRequest)
+		return
+	}
+
 	// TODO: should we check if the spot is available here?
 
 	err = s.MongoDB.AddReservation(data)
@@ -61,6 +66,11 @@ func (s *Server) editReservation(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
 		s.handleError(w, "Failed to decode request body", err, http.StatusBadRequest)
+		return
+	}
+
+	if err := s.Validator.Struct(input); err != nil {
+		s.handleError(w, err.Error(), err, http.StatusBadRequest)
 		return
 	}
 

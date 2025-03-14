@@ -6,20 +6,23 @@ import (
 	"github.com/ciameksw/reserve-park/reservation/internal/reservation/config"
 	"github.com/ciameksw/reserve-park/reservation/internal/reservation/logger"
 	"github.com/ciameksw/reserve-park/reservation/internal/reservation/mongodb"
+	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
 )
 
 type Server struct {
-	Logger  *logger.Logger
-	Config  *config.Config
-	MongoDB *mongodb.MongoDB
+	Logger    *logger.Logger
+	Config    *config.Config
+	MongoDB   *mongodb.MongoDB
+	Validator *validator.Validate
 }
 
 func NewServer(log *logger.Logger, cfg *config.Config, db *mongodb.MongoDB) *Server {
 	return &Server{
-		Logger:  log,
-		Config:  cfg,
-		MongoDB: db,
+		Logger:    log,
+		Config:    cfg,
+		MongoDB:   db,
+		Validator: validator.New(),
 	}
 }
 

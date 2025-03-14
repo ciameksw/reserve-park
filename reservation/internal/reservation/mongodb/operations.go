@@ -17,14 +17,14 @@ const (
 
 type Reservation struct {
 	ID            primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
-	ReservationID string             `json:"reservation_id" bson:"reservation_id"`
-	UserID        string             `json:"user_id" bson:"user_id"`
-	SpotID        string             `json:"spot_id" bson:"spot_id"`
-	StartTime     time.Time          `json:"start_time" bson:"start_time"`
-	EndTime       time.Time          `json:"end_time" bson:"end_time"`
-	Status        StatusType         `json:"status" bson:"status"`
-	PricePaid     float64            `json:"price_paid" bson:"price_paid"`
-	CreateAt      time.Time          `json:"created_at" bson:"created_at"`
+	ReservationID string             `json:"reservation_id" bson:"reservation_id" validate:"required"`
+	UserID        string             `json:"user_id" bson:"user_id" validate:"required"`
+	SpotID        string             `json:"spot_id" bson:"spot_id" validate:"required"`
+	StartTime     time.Time          `json:"start_time" bson:"start_time" validate:"required"`
+	EndTime       time.Time          `json:"end_time" bson:"end_time" validate:"required"`
+	Status        StatusType         `json:"status" bson:"status" validate:"required,oneof=valid canceled"`
+	PricePaid     float64            `json:"price_paid" bson:"price_paid" validate:"required,gt=0"`
+	CreateAt      time.Time          `json:"created_at" bson:"created_at" validate:"required"`
 }
 
 func (m *MongoDB) AddReservation(reservation Reservation) error {
