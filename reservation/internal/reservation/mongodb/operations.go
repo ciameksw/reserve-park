@@ -105,31 +105,45 @@ func (m *MongoDB) GetReservationsBy(parameter parameterInput, id string) ([]Rese
 }
 
 type AvailabilityInput struct {
-	SpotID    string    `json:"spot_id" validate:"required"`
+	SpotIDs   []string  `json:"spot_ids" validate:"required"`
 	StartTime time.Time `json:"start_time" validate:"required"`
 	EndTime   time.Time `json:"end_time" validate:"required"`
 }
 
-func (m *MongoDB) CheckAvailability(input AvailabilityInput) (bool, error) {
+func (m *MongoDB) CheckAvailability(input AvailabilityInput) ([]string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	filter := bson.M{
-		"spot_id":    input.SpotID,
+		"spot_id":    bson.M{"$in": input.SpotIDs},
 		"start_time": bson.M{"$lt": input.EndTime},
 		"end_time":   bson.M{"$gt": input.StartTime},
 	}
 
 	cursor, err := m.Collection.Find(ctx, filter)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	var reservations []Reservation
 	err = cursor.All(ctx, &reservations)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
-	return len(reservations) == 0, nil
+	// Create map of unavailable spots
+	unavailableSpots := make(map[string]struct{})
+	for _, res := range reservations {
+		unavailableSpots[res.SpotID] = struct{}{}
+	}
+
+	var availableSpots []string
+	for _, spotID := range input.SpotIDs {
+		_, found := unavailableSpots[spotID]
+		if !found {
+			availableSpots = append(availableSpots, spotID)
+		}
+	}
+
+	return availableSpots, nil
 }

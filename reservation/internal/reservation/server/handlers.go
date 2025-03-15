@@ -48,18 +48,18 @@ func (s *Server) addReservation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	availableInput := m.AvailabilityInput{
-		SpotID:    input.SpotID,
+		SpotIDs:   []string{input.SpotID},
 		StartTime: input.StartTime,
 		EndTime:   input.EndTime,
 	}
 
-	available, err := s.MongoDB.CheckAvailability(availableInput)
+	availableSpots, err := s.MongoDB.CheckAvailability(availableInput)
 	if err != nil {
 		s.handleError(w, "Failed to check availability", err, http.StatusInternalServerError)
 		return
 	}
 
-	if !available {
+	if len(availableSpots) == 0 {
 		s.handleError(w, "Spot not available in provided timeframe", nil, http.StatusConflict)
 		return
 	}
@@ -91,18 +91,18 @@ func (s *Server) editReservation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	availableInput := m.AvailabilityInput{
-		SpotID:    input.SpotID,
+		SpotIDs:   []string{input.SpotID},
 		StartTime: input.StartTime,
 		EndTime:   input.EndTime,
 	}
 
-	available, err := s.MongoDB.CheckAvailability(availableInput)
+	availableSpots, err := s.MongoDB.CheckAvailability(availableInput)
 	if err != nil {
 		s.handleError(w, "Failed to check availability", err, http.StatusInternalServerError)
 		return
 	}
 
-	if !available {
+	if len(availableSpots) == 0 {
 		s.handleError(w, "Spot not available in provided timeframe", nil, http.StatusConflict)
 		return
 	}
@@ -263,14 +263,20 @@ func (s *Server) checkAvailability(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	available, err := s.MongoDB.CheckAvailability(input)
+	availableSpots, err := s.MongoDB.CheckAvailability(input)
 	if err != nil {
 		s.handleError(w, "Failed to check availability", err, http.StatusInternalServerError)
 		return
 	}
 
-	s.Logger.Info.Printf("Spot %v available: %v", input.SpotID, available)
-	s.writeJSON(w, available, http.StatusOK)
+	if len(availableSpots) == 0 {
+		s.Logger.Info.Println("No available spots found")
+		s.writeJSON(w, []string{}, http.StatusOK)
+		return
+	}
+
+	s.Logger.Info.Printf("Available spots found: %v", len(availableSpots))
+	s.writeJSON(w, availableSpots, http.StatusOK)
 }
 
 // Helper function to handle errors
