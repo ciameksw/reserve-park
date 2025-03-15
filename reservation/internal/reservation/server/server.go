@@ -37,6 +37,7 @@ func (s *Server) Start() {
 
 	r.HandleFunc("/reservations/user/{id}", s.getUserReservations).Methods("GET")
 	r.HandleFunc("/reservations/spot/{id}", s.getSpotReservations).Methods("GET")
+	r.HandleFunc("/reservations/availability/check", s.checkAvailability).Methods("GET")
 
 	addr := s.Config.ServerHost + ":" + s.Config.ServerPort
 	s.Logger.Info.Printf("Server started at %s\n", addr)

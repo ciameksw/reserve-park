@@ -47,7 +47,22 @@ func (s *Server) addReservation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: should we check if the spot is available here?
+	availableInput := m.AvailabilityInput{
+		SpotID:    input.SpotID,
+		StartTime: input.StartTime,
+		EndTime:   input.EndTime,
+	}
+
+	available, err := s.MongoDB.CheckAvailability(availableInput)
+	if err != nil {
+		s.handleError(w, "Failed to check availability", err, http.StatusInternalServerError)
+		return
+	}
+
+	if !available {
+		s.handleError(w, "Spot not available in provided timeframe", nil, http.StatusConflict)
+		return
+	}
 
 	err = s.MongoDB.AddReservation(data)
 	if err != nil {
@@ -75,7 +90,22 @@ func (s *Server) editReservation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: should we check if the spot is available here?
+	availableInput := m.AvailabilityInput{
+		SpotID:    input.SpotID,
+		StartTime: input.StartTime,
+		EndTime:   input.EndTime,
+	}
+
+	available, err := s.MongoDB.CheckAvailability(availableInput)
+	if err != nil {
+		s.handleError(w, "Failed to check availability", err, http.StatusInternalServerError)
+		return
+	}
+
+	if !available {
+		s.handleError(w, "Spot not available in provided timeframe", nil, http.StatusConflict)
+		return
+	}
 
 	err = s.MongoDB.EditReservation(input)
 	if err != nil {
@@ -216,6 +246,31 @@ func (s *Server) getSpotReservations(w http.ResponseWriter, r *http.Request) {
 
 	s.Logger.Info.Printf("Reservations found: %v documents", len(reservations))
 	s.writeJSON(w, reservations, http.StatusOK)
+}
+
+func (s *Server) checkAvailability(w http.ResponseWriter, r *http.Request) {
+	s.Logger.Info.Println("Checking availability")
+	var input m.AvailabilityInput
+
+	err := json.NewDecoder(r.Body).Decode(&input)
+	if err != nil {
+		s.handleError(w, "Failed to decode request body", err, http.StatusBadRequest)
+		return
+	}
+
+	if err := s.Validator.Struct(input); err != nil {
+		s.handleError(w, err.Error(), err, http.StatusBadRequest)
+		return
+	}
+
+	available, err := s.MongoDB.CheckAvailability(input)
+	if err != nil {
+		s.handleError(w, "Failed to check availability", err, http.StatusInternalServerError)
+		return
+	}
+
+	s.Logger.Info.Printf("Spot %v available: %v", input.SpotID, available)
+	s.writeJSON(w, available, http.StatusOK)
 }
 
 // Helper function to handle errors
