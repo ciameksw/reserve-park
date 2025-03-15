@@ -103,3 +103,33 @@ func (m *MongoDB) GetReservationsBy(parameter parameterInput, id string) ([]Rese
 	err = cursor.All(ctx, &reservations)
 	return reservations, err
 }
+
+type AvailabilityInput struct {
+	SpotID    string    `json:"spot_id" validate:"required"`
+	StartTime time.Time `json:"start_time" validate:"required"`
+	EndTime   time.Time `json:"end_time" validate:"required"`
+}
+
+func (m *MongoDB) CheckAvailability(input AvailabilityInput) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	filter := bson.M{
+		"spot_id":    input.SpotID,
+		"start_time": bson.M{"$lt": input.EndTime},
+		"end_time":   bson.M{"$gt": input.StartTime},
+	}
+
+	cursor, err := m.Collection.Find(ctx, filter)
+	if err != nil {
+		return false, err
+	}
+
+	var reservations []Reservation
+	err = cursor.All(ctx, &reservations)
+	if err != nil {
+		return false, err
+	}
+
+	return len(reservations) == 0, nil
+}
