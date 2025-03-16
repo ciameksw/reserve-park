@@ -24,7 +24,7 @@ type Reservation struct {
 	EndTime       time.Time          `json:"end_time" bson:"end_time" validate:"required"`
 	Status        StatusType         `json:"status" bson:"status" validate:"required,oneof=valid canceled"`
 	PricePaid     float64            `json:"price_paid" bson:"price_paid" validate:"required,gt=0"`
-	CreateAt      time.Time          `json:"created_at" bson:"created_at" validate:"required"`
+	UpdatedAt     time.Time          `json:"updated_at" bson:"updated_at" validate:"required"`
 }
 
 func (m *MongoDB) AddReservation(reservation Reservation) error {
