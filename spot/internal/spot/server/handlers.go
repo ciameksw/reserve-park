@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	m "github.com/ciameksw/reserve-park/spot/internal/spot/mongodb"
 	"github.com/google/uuid"
@@ -11,9 +12,11 @@ import (
 )
 
 type addInput struct {
-	Latitude     float64 `json:"latitude"`
-	Longitude    float64 `json:"longitude"`
-	PricePerHour float64 `json:"price_per_hour"`
+	Latitude     float64    `json:"latitude"`
+	Longitude    float64    `json:"longitude"`
+	PricePerHour float64    `json:"price_per_hour"`
+	Size         m.SizeType `json:"size"`
+	Type         m.SpotType `json:"type"`
 }
 
 func (s *Server) addSpot(w http.ResponseWriter, r *http.Request) {
@@ -31,6 +34,14 @@ func (s *Server) addSpot(w http.ResponseWriter, r *http.Request) {
 		Latitude:     input.Latitude,
 		Longitude:    input.Longitude,
 		PricePerHour: input.PricePerHour,
+		Size:         input.Size,
+		Type:         input.Type,
+		UpdatedAt:    time.Now(),
+	}
+
+	if err := s.Validator.Struct(data); err != nil {
+		s.handleError(w, err.Error(), err, http.StatusBadRequest)
+		return
 	}
 
 	err = s.MongoDB.AddSpot(data)
@@ -41,11 +52,21 @@ func (s *Server) addSpot(w http.ResponseWriter, r *http.Request) {
 
 	s.Logger.Info.Printf("Spot added: %v", data.SpotID)
 	w.WriteHeader(http.StatusCreated)
+	w.Write([]byte(data.SpotID))
+}
+
+type editInput struct {
+	SpotID       string     `json:"spot_id"`
+	Latitude     float64    `json:"latitude"`
+	Longitude    float64    `json:"longitude"`
+	PricePerHour float64    `json:"price_per_hour"`
+	Size         m.SizeType `json:"size"`
+	Type         m.SpotType `json:"type"`
 }
 
 func (s *Server) editSpot(w http.ResponseWriter, r *http.Request) {
 	s.Logger.Info.Println("Editing spot")
-	var input m.Spot
+	var input editInput
 
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
@@ -53,7 +74,22 @@ func (s *Server) editSpot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.MongoDB.EditSpot(input)
+	data := m.Spot{
+		SpotID:       input.SpotID,
+		Latitude:     input.Latitude,
+		Longitude:    input.Longitude,
+		PricePerHour: input.PricePerHour,
+		Size:         input.Size,
+		Type:         input.Type,
+		UpdatedAt:    time.Now(),
+	}
+
+	if err := s.Validator.Struct(data); err != nil {
+		s.handleError(w, err.Error(), err, http.StatusBadRequest)
+		return
+	}
+
+	err = s.MongoDB.EditSpot(data)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			s.handleError(w, "Spot not found", err, http.StatusNotFound)
