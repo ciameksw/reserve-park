@@ -2,20 +2,30 @@ package mongodb
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+type StatusType string
+
+const (
+	StatusValid    StatusType = "valid"
+	StatusCanceled StatusType = "canceled"
+)
+
 type Reservation struct {
 	ID            primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
-	ReservationID string             `json:"reservation_id" bson:"reservation_id"`
-	UserID        string             `json:"user_id" bson:"user_id"`
-	SpotID        string             `json:"spot_id" bson:"spot_id"`
-	Start         time.Time          `json:"start" bson:"start"`
-	End           time.Time          `json:"end" bson:"end"`
-	Canceled      bool               `json:"canceled" bson:"canceled"`
+	ReservationID string             `json:"reservation_id" bson:"reservation_id" validate:"required"`
+	UserID        string             `json:"user_id" bson:"user_id" validate:"required"`
+	SpotID        string             `json:"spot_id" bson:"spot_id" validate:"required"`
+	StartTime     time.Time          `json:"start_time" bson:"start_time" validate:"required"`
+	EndTime       time.Time          `json:"end_time" bson:"end_time" validate:"required"`
+	Status        StatusType         `json:"status" bson:"status" validate:"required,oneof=valid canceled"`
+	PricePaid     float64            `json:"price_paid" bson:"price_paid" validate:"required,gt=0"`
+	UpdatedAt     time.Time          `json:"updated_at" bson:"updated_at" validate:"required"`
 }
 
 func (m *MongoDB) AddReservation(reservation Reservation) error {
@@ -70,4 +80,87 @@ func (m *MongoDB) GetAll() ([]Reservation, error) {
 	var reservations []Reservation
 	err = cursor.All(ctx, &reservations)
 	return reservations, err
+}
+
+type parameterInput string
+
+const (
+	ByUserID parameterInput = "user_id"
+	BySpotID parameterInput = "spot_id"
+)
+
+func (m *MongoDB) GetReservationsBy(parameter parameterInput, id string) ([]Reservation, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	filter := bson.M{string(parameter): bson.M{"$eq": id}}
+
+	cursor, err := m.Collection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	var reservations []Reservation
+	err = cursor.All(ctx, &reservations)
+	return reservations, err
+}
+
+type AvailabilityInput struct {
+	SpotIDs   []string  `json:"spot_ids" validate:"required"`
+	StartTime time.Time `json:"start_time" validate:"required"`
+	EndTime   time.Time `json:"end_time" validate:"required"`
+}
+
+func (m *MongoDB) CheckAvailability(input AvailabilityInput) ([]string, error) {
+	return m.checkAvailability(input, "")
+}
+
+func (m *MongoDB) CheckAvailabilityForEdit(input AvailabilityInput, editedReservationID string) ([]string, error) {
+	if len(input.SpotIDs) != 1 {
+		return nil, errors.New("edit mode requires exactly one spot ID")
+	}
+	return m.checkAvailability(input, editedReservationID)
+}
+
+func (m *MongoDB) checkAvailability(input AvailabilityInput, editedReservationID string) ([]string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	filter := bson.M{
+		"spot_id":    bson.M{"$in": input.SpotIDs},
+		"start_time": bson.M{"$lt": input.EndTime},
+		"end_time":   bson.M{"$gt": input.StartTime},
+	}
+
+	// If we are in edit mode, exclude the edited reservation from the check
+	if editedReservationID != "" {
+		filter["reservation_id"] = bson.M{"$ne": editedReservationID}
+	}
+
+	cursor, err := m.Collection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	var reservations []Reservation
+	err = cursor.All(ctx, &reservations)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create map of unavailable spots
+	unavailableSpots := make(map[string]struct{})
+	for _, res := range reservations {
+		unavailableSpots[res.SpotID] = struct{}{}
+	}
+
+	var availableSpots []string
+	for _, spotID := range input.SpotIDs {
+		_, found := unavailableSpots[spotID]
+		if !found {
+			availableSpots = append(availableSpots, spotID)
+		}
+	}
+
+	return availableSpots, nil
 }
