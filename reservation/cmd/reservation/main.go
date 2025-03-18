@@ -24,3 +24,5 @@ func main() {
 	s := server.NewServer(lgr, cfg, db)
 	s.Start()
 }
+
+// update wszystkiego w testach

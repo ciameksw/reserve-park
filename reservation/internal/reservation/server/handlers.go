@@ -116,7 +116,7 @@ func (s *Server) editReservation(w http.ResponseWriter, r *http.Request) {
 		EndTime:   data.EndTime,
 	}
 
-	availableSpots, err := s.MongoDB.CheckAvailability(availableInput)
+	availableSpots, err := s.MongoDB.CheckAvailabilityForEdit(availableInput, data.ReservationID)
 	if err != nil {
 		s.handleError(w, "Failed to check availability", err, http.StatusInternalServerError)
 		return
