@@ -8,12 +8,31 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+type SizeType string
+
+const (
+	SizeSmall  SizeType = "small"
+	SizeMedium SizeType = "medium"
+	SizeLarge  SizeType = "large"
+)
+
+type SpotType string
+
+const (
+	SpotTypeIndoor  SpotType = "indoor"
+	SpotTypeOutdoor SpotType = "outdoor"
+	SpotTypeEV      SpotType = "ev"
+)
+
 type Spot struct {
 	ID           primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
-	SpotID       string             `json:"spot_id" bson:"spot_id"`
-	Latitude     float64            `json:"latitude" bson:"latitude"`
-	Longitude    float64            `json:"longitude" bson:"longitude"`
-	PricePerHour float64            `json:"price_per_hour" bson:"price_per_hour"`
+	SpotID       string             `json:"spot_id" bson:"spot_id" validate:"required"`
+	Latitude     float64            `json:"latitude" bson:"latitude" validate:"required"`
+	Longitude    float64            `json:"longitude" bson:"longitude" validate:"required"`
+	PricePerHour float64            `json:"price_per_hour" bson:"price_per_hour" validate:"required,gt=0"`
+	Size         SizeType           `json:"size" bson:"size" validate:"required,oneof=small medium large"`
+	Type         SpotType           `json:"type" bson:"type" validate:"required,oneof=indoor outdoor ev"`
+	UpdatedAt    time.Time          `json:"updated_at" bson:"updated_at" validate:"required"`
 }
 
 func (m *MongoDB) AddSpot(spot Spot) error {
