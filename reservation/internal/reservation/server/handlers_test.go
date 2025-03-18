@@ -17,6 +17,8 @@ import (
 
 var s *Server
 var reservationID string
+var userID = "75390349821"
+var spotID = "96363829890"
 
 func TestMain(m *testing.M) {
 	// Get logger
@@ -39,10 +41,12 @@ func TestMain(m *testing.M) {
 
 func TestAddReservation(t *testing.T) {
 	input := addInput{
-		UserID: "12345",
-		SpotID: "12345",
-		Start:  time.Now(),
-		End:    time.Now().Add(time.Hour),
+		UserID:    userID,
+		SpotID:    spotID,
+		StartTime: time.Now(),
+		EndTime:   time.Now().Add(time.Hour),
+		Status:    "valid",
+		PricePaid: 10.0,
 	}
 	body, _ := json.Marshal(input)
 	req, err := http.NewRequest("POST", "/reservations", bytes.NewBuffer(body))
@@ -58,6 +62,8 @@ func TestAddReservation(t *testing.T) {
 	if status := rr.Code; status != http.StatusCreated {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusCreated)
 	}
+
+	reservationID = rr.Body.String()
 }
 
 func TestGetAllReservations(t *testing.T) {
@@ -84,8 +90,6 @@ func TestGetAllReservations(t *testing.T) {
 	if len(reservations) != 1 {
 		t.Errorf("handler returned wrong number of reservations: got %v want %v", len(reservations), 1)
 	}
-
-	reservationID = reservations[0].ReservationID
 }
 
 func TestGetUser(t *testing.T) {
@@ -107,15 +111,14 @@ func TestGetUser(t *testing.T) {
 }
 
 func TestEditReservation(t *testing.T) {
-	input := mongodb.Reservation{
+	input := editInput{
 		ReservationID: reservationID,
-		UserID:        "54321",
-		SpotID:        "54321",
+		UserID:        userID,
+		SpotID:        spotID,
 		StartTime:     time.Now(),
-		EndTime:       time.Now().Add(time.Hour),
-		Status:        "active",
+		EndTime:       time.Now().Add(2 * time.Hour),
+		Status:        "valid",
 		PricePaid:     10.0,
-		CreateAt:      time.Now(),
 	}
 	body, _ := json.Marshal(input)
 	req, err := http.NewRequest("PUT", "/reservations", bytes.NewBuffer(body))
@@ -133,8 +136,72 @@ func TestEditReservation(t *testing.T) {
 	}
 }
 
+func TestCheckAvailabilityOccupied(t *testing.T) {
+	input := mongodb.AvailabilityInput{
+		SpotIDs:   []string{spotID},
+		StartTime: time.Now(),
+		EndTime:   time.Now().Add(2 * time.Hour),
+	}
+	body, _ := json.Marshal(input)
+	req, err := http.NewRequest("GET", "/reservations/availability/check", bytes.NewBuffer(body))
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(s.checkAvailability)
+
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var availableSpots []string
+	err = json.NewDecoder(rr.Body).Decode(&availableSpots)
+	if err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if len(availableSpots) != 0 {
+		t.Errorf("handler returned wrong number of available spots: got %v want %v", len(availableSpots), 0)
+	}
+}
+
+func TestCheckAvailabilityFree(t *testing.T) {
+	input := mongodb.AvailabilityInput{
+		SpotIDs:   []string{spotID},
+		StartTime: time.Now().Add(2 * time.Hour),
+		EndTime:   time.Now().Add(3 * time.Hour),
+	}
+	body, _ := json.Marshal(input)
+	req, err := http.NewRequest("GET", "/reservations/availability/check", bytes.NewBuffer(body))
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(s.checkAvailability)
+
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var availableSpots []string
+	err = json.NewDecoder(rr.Body).Decode(&availableSpots)
+	if err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if len(availableSpots) != 1 {
+		t.Errorf("handler returned wrong number of available spots: got %v want %v", len(availableSpots), 1)
+	}
+}
+
 func TestGetReservationsByUser(t *testing.T) {
-	req, err := http.NewRequest("GET", "/reservations/user/54321", nil)
+	req, err := http.NewRequest("GET", "/reservations/user/"+userID, nil)
 	if err != nil {
 		t.Fatalf("Failed to create request: %v", err)
 	}
@@ -162,7 +229,7 @@ func TestGetReservationsByUser(t *testing.T) {
 }
 
 func TestGetReservationsBySpot(t *testing.T) {
-	req, err := http.NewRequest("GET", "/reservations/spot/54321", nil)
+	req, err := http.NewRequest("GET", "/reservations/spot/"+spotID, nil)
 	if err != nil {
 		t.Fatalf("Failed to create request: %v", err)
 	}
