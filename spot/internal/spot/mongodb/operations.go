@@ -88,3 +88,28 @@ func (m *MongoDB) GetAll() ([]Spot, error) {
 	err = cursor.All(ctx, &spots)
 	return spots, err
 }
+
+type GetPriceInput struct {
+	SpotID    string    `json:"spot_id" bson:"spot_id" validate:"required"`
+	StartTime time.Time `json:"start_time" bson:"start_time" validate:"required"`
+	EndTime   time.Time `json:"end_time" bson:"end_time" validate:"required"`
+}
+
+func (m *MongoDB) GetPrice(input GetPriceInput) (float64, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	filter := bson.M{"spot_id": bson.M{"$eq": input.SpotID}}
+
+	var spot Spot
+	err := m.Collection.FindOne(ctx, filter).Decode(&spot)
+	if err != nil {
+		return 0, err
+	}
+
+	diff := input.EndTime.Sub(input.StartTime).Hours()
+	price := diff * spot.PricePerHour
+	price = float64(int(price*100)) / 100
+
+	return price, nil
+}

@@ -171,6 +171,38 @@ func (s *Server) getAllSpots(w http.ResponseWriter, r *http.Request) {
 	s.writeJSON(w, spots, http.StatusOK)
 }
 
+func (s *Server) getPrice(w http.ResponseWriter, r *http.Request) {
+	s.Logger.Info.Println("Getting spot's price")
+	var input m.GetPriceInput
+
+	err := json.NewDecoder(r.Body).Decode(&input)
+	if err != nil {
+		s.handleError(w, "Failed to decode request body", err, http.StatusBadRequest)
+		return
+	}
+
+	if err := s.Validator.Struct(input); err != nil {
+		s.handleError(w, err.Error(), err, http.StatusBadRequest)
+		return
+	}
+
+	if input.StartTime.After(input.EndTime) {
+		s.handleError(w, "Start time must be before end time", err, http.StatusBadRequest)
+	}
+
+	price, err := s.MongoDB.GetPrice(input)
+	if err != nil {
+		s.handleError(w, "Failed to get the price", err, http.StatusInternalServerError)
+	}
+
+	s.Logger.Info.Printf("Price calculated: %v", price)
+	resp := map[string]interface{}{
+		"spot_id": input.SpotID,
+		"price":   price,
+	}
+	s.writeJSON(w, resp, http.StatusOK)
+}
+
 // Helper function to handle errors
 func (s *Server) handleError(w http.ResponseWriter, message string, err error, statusCode int) {
 	if err != nil {
