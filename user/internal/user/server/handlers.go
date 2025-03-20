@@ -21,9 +21,7 @@ func (s *Server) addUser(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
-		msg := "Failed to decode request body"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusBadRequest)
+		s.handleError(w, "Failed to decode request body", err, http.StatusBadRequest)
 		return
 	}
 
@@ -36,9 +34,7 @@ func (s *Server) addUser(w http.ResponseWriter, r *http.Request) {
 
 	err = s.MongoDB.AddUser(data)
 	if err != nil {
-		msg := "Failed to add user to MongoDB"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusInternalServerError)
+		s.handleError(w, "Failed to add user to MongoDB", err, http.StatusInternalServerError)
 		return
 	}
 
@@ -52,17 +48,13 @@ func (s *Server) editUser(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
-		msg := "Failed to decode request body"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusBadRequest)
+		s.handleError(w, "Failed to decode request body", err, http.StatusBadRequest)
 		return
 	}
 
 	err = s.MongoDB.EditUser(input)
 	if err != nil {
-		msg := "Failed to edit user in MongoDB"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusInternalServerError)
+		s.handleError(w, "Failed to edit user in MongoDB", err, http.StatusInternalServerError)
 		return
 	}
 
@@ -75,24 +67,18 @@ func (s *Server) deleteUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
-		msg := "Missing user ID"
-		s.Logger.Error.Println(msg)
-		http.Error(w, msg, http.StatusBadRequest)
+		s.handleError(w, "Missing user ID", nil, http.StatusBadRequest)
 		return
 	}
 
 	err := s.MongoDB.DeleteUser(id)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			msg := "User not found"
-			s.Logger.Error.Printf("%s: %v", msg, id)
-			http.Error(w, msg, http.StatusNotFound)
+			s.handleError(w, "User not found", err, http.StatusNotFound)
 			return
 		}
 
-		msg := "Failed to delete user"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusInternalServerError)
+		s.handleError(w, "Failed to delete user", err, http.StatusInternalServerError)
 		return
 	}
 
@@ -105,54 +91,62 @@ func (s *Server) getUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
-		msg := "Missing user ID"
-		s.Logger.Error.Println(msg)
-		http.Error(w, msg, http.StatusBadRequest)
+		s.handleError(w, "Missing user ID", nil, http.StatusBadRequest)
 		return
 	}
 
 	user, err := s.MongoDB.GetUser(id)
 	if err != nil {
-		msg := "Failed to get user"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusInternalServerError)
-		return
-	}
+		if err == mongo.ErrNoDocuments {
+			s.handleError(w, "User not found", err, http.StatusNotFound)
+			return
+		}
 
-	j, err := json.Marshal(user)
-	if err != nil {
-		msg := "Failed to encode user to JSON"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusInternalServerError)
+		s.handleError(w, "Failed to get user", err, http.StatusInternalServerError)
 		return
 	}
 
 	s.Logger.Info.Printf("User found: %v", user.Username)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(j)
+	s.writeJSON(w, user, http.StatusOK)
 }
 
 func (s *Server) getAllUsers(w http.ResponseWriter, r *http.Request) {
 	s.Logger.Info.Println("Getting all users")
 	users, err := s.MongoDB.GetAll()
 	if err != nil {
-		msg := "Failed to get users"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusInternalServerError)
+		s.handleError(w, "Failed to get users", err, http.StatusInternalServerError)
 		return
 	}
 
-	j, err := json.Marshal(users)
-	if err != nil {
-		msg := "Failed to encode users to JSON"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusInternalServerError)
+	if len(users) == 0 {
+		s.Logger.Info.Println("No users found")
+		s.writeJSON(w, []m.User{}, http.StatusOK)
 		return
 	}
 
 	s.Logger.Info.Printf("Users found: %v", len(users))
+	s.writeJSON(w, users, http.StatusOK)
+}
+
+// Helper function to handle errors
+func (s *Server) handleError(w http.ResponseWriter, message string, err error, statusCode int) {
+	if err != nil {
+		s.Logger.Error.Printf("%s: %v", message, err)
+	} else {
+		s.Logger.Error.Println(message)
+	}
+	http.Error(w, message, statusCode)
+}
+
+// Helper function to write JSON responses
+func (s *Server) writeJSON(w http.ResponseWriter, data interface{}, statusCode int) {
+	j, err := json.Marshal(data)
+	if err != nil {
+		s.handleError(w, "Failed to encode response to JSON", err, http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(statusCode)
 	w.Write(j)
 }
