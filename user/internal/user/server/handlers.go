@@ -54,6 +54,11 @@ func (s *Server) editUser(w http.ResponseWriter, r *http.Request) {
 
 	err = s.MongoDB.EditUser(input)
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			s.handleError(w, "User not found", err, http.StatusNotFound)
+			return
+		}
+
 		s.handleError(w, "Failed to edit user in MongoDB", err, http.StatusInternalServerError)
 		return
 	}
