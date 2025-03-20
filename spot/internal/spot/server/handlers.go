@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	m "github.com/ciameksw/reserve-park/spot/internal/spot/mongodb"
 	"github.com/google/uuid"
@@ -11,9 +12,11 @@ import (
 )
 
 type addInput struct {
-	Latitude     float64 `json:"latitude"`
-	Longitude    float64 `json:"longitude"`
-	PricePerHour float64 `json:"price_per_hour"`
+	Latitude     float64    `json:"latitude"`
+	Longitude    float64    `json:"longitude"`
+	PricePerHour float64    `json:"price_per_hour"`
+	Size         m.SizeType `json:"size"`
+	Type         m.SpotType `json:"type"`
 }
 
 func (s *Server) addSpot(w http.ResponseWriter, r *http.Request) {
@@ -22,9 +25,7 @@ func (s *Server) addSpot(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
-		msg := "Failed to decode request body"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusBadRequest)
+		s.handleError(w, "Failed to decode request body", err, http.StatusBadGateway)
 		return
 	}
 
@@ -32,38 +33,70 @@ func (s *Server) addSpot(w http.ResponseWriter, r *http.Request) {
 		SpotID:       uuid.NewString(),
 		Latitude:     input.Latitude,
 		Longitude:    input.Longitude,
-		PricePerHour: input.PricePerHour,
+		PricePerHour: float64(int(input.PricePerHour*100)) / 100,
+		Size:         input.Size,
+		Type:         input.Type,
+		UpdatedAt:    time.Now(),
+	}
+
+	if err := s.Validator.Struct(data); err != nil {
+		s.handleError(w, err.Error(), err, http.StatusBadRequest)
+		return
 	}
 
 	err = s.MongoDB.AddSpot(data)
 	if err != nil {
-		msg := "Failed to add spot to MongoDB"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusInternalServerError)
+		s.handleError(w, "Failed to add spot to MongoDB", err, http.StatusInternalServerError)
 		return
 	}
 
 	s.Logger.Info.Printf("Spot added: %v", data.SpotID)
 	w.WriteHeader(http.StatusCreated)
+	w.Write([]byte(data.SpotID))
+}
+
+type editInput struct {
+	SpotID       string     `json:"spot_id"`
+	Latitude     float64    `json:"latitude"`
+	Longitude    float64    `json:"longitude"`
+	PricePerHour float64    `json:"price_per_hour"`
+	Size         m.SizeType `json:"size"`
+	Type         m.SpotType `json:"type"`
 }
 
 func (s *Server) editSpot(w http.ResponseWriter, r *http.Request) {
 	s.Logger.Info.Println("Editing spot")
-	var input m.Spot
+	var input editInput
 
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
-		msg := "Failed to decode request body"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusBadRequest)
+		s.handleError(w, "Failed to decode request body", err, http.StatusBadRequest)
 		return
 	}
 
-	err = s.MongoDB.EditSpot(input)
+	data := m.Spot{
+		SpotID:       input.SpotID,
+		Latitude:     input.Latitude,
+		Longitude:    input.Longitude,
+		PricePerHour: float64(int(input.PricePerHour*100)) / 100,
+		Size:         input.Size,
+		Type:         input.Type,
+		UpdatedAt:    time.Now(),
+	}
+
+	if err := s.Validator.Struct(data); err != nil {
+		s.handleError(w, err.Error(), err, http.StatusBadRequest)
+		return
+	}
+
+	err = s.MongoDB.EditSpot(data)
 	if err != nil {
-		msg := "Failed to edit spot in MongoDB"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusInternalServerError)
+		if err == mongo.ErrNoDocuments {
+			s.handleError(w, "Spot not found", err, http.StatusNotFound)
+			return
+		}
+
+		s.handleError(w, "Failed to edit spot in MongoDB", err, http.StatusInternalServerError)
 		return
 	}
 
@@ -76,24 +109,18 @@ func (s *Server) deleteSpot(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
-		msg := "Spot ID not provided"
-		s.Logger.Error.Println(msg)
-		http.Error(w, msg, http.StatusBadRequest)
+		s.handleError(w, "Missing spot ID", nil, http.StatusBadRequest)
 		return
 	}
 
 	err := s.MongoDB.DeleteSpot(id)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			msg := "Spot not found"
-			s.Logger.Error.Println(msg)
-			http.Error(w, msg, http.StatusNotFound)
+			s.handleError(w, "Spot not found", err, http.StatusNotFound)
 			return
 		}
 
-		msg := "Failed to delete spot"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusInternalServerError)
+		s.handleError(w, "Failed to delete spot", err, http.StatusInternalServerError)
 		return
 	}
 
@@ -106,32 +133,23 @@ func (s *Server) getSpot(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
-		msg := "Spot ID not provided"
-		s.Logger.Error.Println(msg)
-		http.Error(w, msg, http.StatusBadRequest)
+		s.handleError(w, "Missing spot ID", nil, http.StatusBadRequest)
 		return
 	}
 
 	spot, err := s.MongoDB.GetSpot(id)
 	if err != nil {
-		msg := "Failed to get spot"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusInternalServerError)
-		return
-	}
+		if err == mongo.ErrNoDocuments {
+			s.handleError(w, "Spot not found", err, http.StatusNotFound)
+			return
+		}
 
-	j, err := json.Marshal(spot)
-	if err != nil {
-		msg := "Failed to encode spot to JSON"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusInternalServerError)
+		s.handleError(w, "Failed to get spot from MongoDB", err, http.StatusInternalServerError)
 		return
 	}
 
 	s.Logger.Info.Printf("Spot found: %v", id)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(j)
+	s.writeJSON(w, spot, http.StatusOK)
 }
 
 func (s *Server) getAllSpots(w http.ResponseWriter, r *http.Request) {
@@ -139,22 +157,71 @@ func (s *Server) getAllSpots(w http.ResponseWriter, r *http.Request) {
 
 	spots, err := s.MongoDB.GetAll()
 	if err != nil {
-		msg := "Failed to get all spots"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusInternalServerError)
+		s.handleError(w, "Failed to get all spots", err, http.StatusInternalServerError)
 		return
 	}
 
-	j, err := json.Marshal(spots)
-	if err != nil {
-		msg := "Failed to encode spots to JSON"
-		s.Logger.Error.Printf("%s: %v", msg, err)
-		http.Error(w, msg, http.StatusInternalServerError)
+	if len(spots) == 0 {
+		s.Logger.Info.Println("No spots found")
+		s.writeJSON(w, []m.Spot{}, http.StatusOK)
 		return
 	}
 
 	s.Logger.Info.Printf("Spots found: %v", len(spots))
+	s.writeJSON(w, spots, http.StatusOK)
+}
+
+func (s *Server) getPrice(w http.ResponseWriter, r *http.Request) {
+	s.Logger.Info.Println("Getting spot's price")
+	var input m.GetPriceInput
+
+	err := json.NewDecoder(r.Body).Decode(&input)
+	if err != nil {
+		s.handleError(w, "Failed to decode request body", err, http.StatusBadRequest)
+		return
+	}
+
+	if err := s.Validator.Struct(input); err != nil {
+		s.handleError(w, err.Error(), err, http.StatusBadRequest)
+		return
+	}
+
+	if input.StartTime.After(input.EndTime) {
+		s.handleError(w, "Start time must be before end time", err, http.StatusBadRequest)
+	}
+
+	price, err := s.MongoDB.GetPrice(input)
+	if err != nil {
+		s.handleError(w, "Failed to get the price", err, http.StatusInternalServerError)
+	}
+
+	s.Logger.Info.Printf("Price calculated: %v", price)
+	resp := map[string]interface{}{
+		"spot_id": input.SpotID,
+		"price":   price,
+	}
+	s.writeJSON(w, resp, http.StatusOK)
+}
+
+// Helper function to handle errors
+func (s *Server) handleError(w http.ResponseWriter, message string, err error, statusCode int) {
+	if err != nil {
+		s.Logger.Error.Printf("%s: %v", message, err)
+	} else {
+		s.Logger.Error.Println(message)
+	}
+	http.Error(w, message, statusCode)
+}
+
+// Helper function to write JSON responses
+func (s *Server) writeJSON(w http.ResponseWriter, data interface{}, statusCode int) {
+	j, err := json.Marshal(data)
+	if err != nil {
+		s.handleError(w, "Failed to encode response to JSON", err, http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(statusCode)
 	w.Write(j)
 }

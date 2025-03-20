@@ -6,25 +6,30 @@ import (
 	"github.com/ciameksw/reserve-park/spot/internal/spot/config"
 	"github.com/ciameksw/reserve-park/spot/internal/spot/logger"
 	"github.com/ciameksw/reserve-park/spot/internal/spot/mongodb"
+	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
 )
 
 type Server struct {
-	Logger  *logger.Logger
-	Config  *config.Config
-	MongoDB *mongodb.MongoDB
+	Logger    *logger.Logger
+	Config    *config.Config
+	MongoDB   *mongodb.MongoDB
+	Validator *validator.Validate
 }
 
 func NewServer(log *logger.Logger, cfg *config.Config, db *mongodb.MongoDB) *Server {
 	return &Server{
-		Logger:  log,
-		Config:  cfg,
-		MongoDB: db,
+		Logger:    log,
+		Config:    cfg,
+		MongoDB:   db,
+		Validator: validator.New(),
 	}
 }
 
 func (s *Server) Start() {
 	r := mux.NewRouter()
+
+	r.HandleFunc("/spots/price", s.getPrice).Methods("GET")
 
 	r.HandleFunc("/spots", s.addSpot).Methods("POST")
 	r.HandleFunc("/spots", s.editSpot).Methods("PUT")
