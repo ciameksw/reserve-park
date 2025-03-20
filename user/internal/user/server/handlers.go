@@ -40,6 +40,7 @@ func (s *Server) addUser(w http.ResponseWriter, r *http.Request) {
 
 	s.Logger.Info.Printf("User added: %v", data.Username)
 	w.WriteHeader(http.StatusCreated)
+	w.Write([]byte(data.UserID))
 }
 
 func (s *Server) editUser(w http.ResponseWriter, r *http.Request) {
