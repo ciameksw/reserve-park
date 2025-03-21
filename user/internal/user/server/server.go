@@ -35,6 +35,8 @@ func (s *Server) Start() {
 	r.HandleFunc("/users/{id}", s.getUser).Methods("GET")
 	r.HandleFunc("/users", s.getAllUsers).Methods("GET")
 
+	r.HandleFunc("/users/login", s.login).Methods("POST")
+
 	addr := s.Config.ServerHost + ":" + s.Config.ServerPort
 	s.Logger.Info.Printf("Server started at %s\n", addr)
 	err := http.ListenAndServe(addr, r)

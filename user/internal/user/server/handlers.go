@@ -190,6 +190,56 @@ func (s *Server) getAllUsers(w http.ResponseWriter, r *http.Request) {
 	s.writeJSON(w, users, http.StatusOK)
 }
 
+type loginInput struct {
+	Username string `json:"username" validate:"required"`
+	Password string `json:"password" validate:"required"`
+}
+
+func (s *Server) login(w http.ResponseWriter, r *http.Request) {
+	s.Logger.Info.Println("Logging user")
+	var input loginInput
+
+	err := json.NewDecoder(r.Body).Decode(&input)
+	if err != nil {
+		s.handleError(w, "Failed to decode request body", err, http.StatusBadRequest)
+		return
+	}
+
+	if err := s.Validator.Struct(input); err != nil {
+		s.handleError(w, "Invalid input data", err, http.StatusBadRequest)
+		return
+	}
+
+	user, err := s.MongoDB.GetUserByUsernameOrEmail(input.Username, "")
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			s.handleError(w, "Invalid username or password", err, http.StatusUnauthorized)
+			return
+		}
+
+		s.handleError(w, "Unexpected server error", err, http.StatusInternalServerError)
+		return
+	}
+
+	match := auth.VerifyPassword(input.Password, user.PasswordHash)
+	if !match {
+		s.handleError(w, "Invalid username or password", err, http.StatusUnauthorized)
+		return
+	}
+
+	jwt, err := auth.GenerateJWT(user.UserID, user.Role, s.Config.Salt)
+	if err != nil {
+		s.handleError(w, "Failed to generate JWT", err, http.StatusInternalServerError)
+		return
+	}
+
+	s.Logger.Info.Printf("User logged in: %v", user.Username)
+	resp := map[string]string{
+		"jwt": jwt,
+	}
+	s.writeJSON(w, resp, http.StatusOK)
+}
+
 // Helper function to handle errors
 func (s *Server) handleError(w http.ResponseWriter, message string, err error, statusCode int) {
 	if err != nil {
