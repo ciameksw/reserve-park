@@ -18,11 +18,11 @@ const (
 
 type User struct {
 	ID           primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
-	UserID       string             `json:"user_id" bson:"user_id"`
-	Username     string             `json:"username" bson:"username"`
-	Email        string             `json:"email" bson:"email"`
-	PasswordHash string             `json:"password_hash" bson:"password_hash"`
-	Role         RoleType           `json:"role" bson:"role"`
+	UserID       string             `json:"user_id" bson:"user_id" validate:"required"`
+	Username     string             `json:"username" bson:"username" validate:"required,min=3,max=30"`
+	Email        string             `json:"email" bson:"email" validate:"required,email"`
+	PasswordHash string             `json:"password_hash" bson:"password_hash" validate:"required"`
+	Role         RoleType           `json:"role" bson:"role" validate:"required,oneof=admin user"`
 	UpdatedAt    time.Time          `json:"updated_at" bson:"updated_at" validate:"required"`
 }
 
