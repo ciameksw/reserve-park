@@ -3,7 +3,9 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
+	"github.com/ciameksw/reserve-park/user/internal/user/auth"
 	m "github.com/ciameksw/reserve-park/user/internal/user/mongodb"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -11,8 +13,10 @@ import (
 )
 
 type addInput struct {
-	Username string `json:"username"`
-	Email    string `json:"email"`
+	Username string     `json:"username"`
+	Email    string     `json:"email"`
+	Password string     `json:"password"`
+	Role     m.RoleType `json:"role"`
 }
 
 func (s *Server) addUser(w http.ResponseWriter, r *http.Request) {
@@ -25,11 +29,24 @@ func (s *Server) addUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	hashedPassword, err := auth.HashPassword(input.Password)
+	if err != nil {
+		s.handleError(w, "Failed to hash the password", err, http.StatusInternalServerError)
+		return
+	}
+
 	data := m.User{
-		UserID:          uuid.NewString(),
-		Username:        input.Username,
-		Email:           input.Email,
-		TotalMoneySpent: 0,
+		UserID:       uuid.NewString(),
+		Username:     input.Username,
+		Email:        input.Email,
+		PasswordHash: hashedPassword,
+		Role:         input.Role,
+		UpdatedAt:    time.Now(),
+	}
+
+	if err := s.Validator.Struct(data); err != nil {
+		s.handleError(w, err.Error(), err, http.StatusBadRequest)
+		return
 	}
 
 	err = s.MongoDB.AddUser(data)
@@ -43,9 +60,17 @@ func (s *Server) addUser(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(data.UserID))
 }
 
+type editInput struct {
+	UserID   string     `json:"user_id"`
+	Username string     `json:"username"`
+	Email    string     `json:"email"`
+	Password string     `json:"password"`
+	Role     m.RoleType `json:"role"`
+}
+
 func (s *Server) editUser(w http.ResponseWriter, r *http.Request) {
 	s.Logger.Info.Println("Editing user")
-	var input m.User
+	var input editInput
 
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
@@ -53,7 +78,28 @@ func (s *Server) editUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.MongoDB.EditUser(input)
+	// TODO: Change this, we dont want to provide the password every time
+	hashedPassword, err := auth.HashPassword(input.Password)
+	if err != nil {
+		s.handleError(w, "Failed to hash the password", err, http.StatusInternalServerError)
+		return
+	}
+
+	data := m.User{
+		UserID:       uuid.NewString(),
+		Username:     input.Username,
+		Email:        input.Email,
+		PasswordHash: hashedPassword,
+		Role:         input.Role,
+		UpdatedAt:    time.Now(),
+	}
+
+	if err := s.Validator.Struct(data); err != nil {
+		s.handleError(w, err.Error(), err, http.StatusBadRequest)
+		return
+	}
+
+	err = s.MongoDB.EditUser(data)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			s.handleError(w, "User not found", err, http.StatusNotFound)

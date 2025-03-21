@@ -8,12 +8,21 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+type RoleType string
+
+const (
+	RoleAdmin RoleType = "admin"
+	RoleUser  RoleType = "user"
+)
+
 type User struct {
-	ID              primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
-	UserID          string             `json:"user_id" bson:"user_id"`
-	Username        string             `json:"username" bson:"username"`
-	Email           string             `json:"email" bson:"email"`
-	TotalMoneySpent float64            `json:"total_money_spent" bson:"total_money_spent"`
+	ID           primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
+	UserID       string             `json:"user_id" bson:"user_id"`
+	Username     string             `json:"username" bson:"username"`
+	Email        string             `json:"email" bson:"email"`
+	PasswordHash string             `json:"password_hash" bson:"password_hash"`
+	Role         RoleType           `json:"role" bson:"role"`
+	UpdatedAt    time.Time          `json:"updated_at" bson:"updated_at" validate:"required"`
 }
 
 func (m *MongoDB) AddUser(user User) error {
