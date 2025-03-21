@@ -9,6 +9,7 @@ type Config struct {
 	ServerHost string
 	ServerPort string
 	MongoURI   string
+	Salt       string
 }
 
 func GetConfig() *Config {
@@ -16,6 +17,7 @@ func GetConfig() *Config {
 		ServerHost: getEnv("SERVER_HOST", "localhost"),
 		ServerPort: getEnv("SERVER_PORT", "3001"),
 		MongoURI:   getEnv("MONGO_URI", "mongodb://localhost:27017"),
+		Salt:       getEnv("SALT", "Nb58PsZJlCiO"),
 	}
 }
 
