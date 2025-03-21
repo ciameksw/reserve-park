@@ -29,6 +29,16 @@ func (s *Server) addUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	existingUser, err := s.MongoDB.GetUserByUsernameOrEmail(input.Username, input.Email)
+	if err != nil && err != mongo.ErrNoDocuments {
+		s.handleError(w, "Failed to check for existing user", err, http.StatusInternalServerError)
+		return
+	}
+	if existingUser != nil {
+		s.handleError(w, "Username or email already exists", nil, http.StatusConflict)
+		return
+	}
+
 	hashedPassword, err := auth.HashPassword(input.Password)
 	if err != nil {
 		s.handleError(w, "Failed to hash the password", err, http.StatusInternalServerError)

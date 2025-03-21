@@ -6,6 +6,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type RoleType string
@@ -31,6 +32,29 @@ func (m *MongoDB) AddUser(user User) error {
 
 	_, err := m.Collection.InsertOne(ctx, user)
 	return err
+}
+
+func (m *MongoDB) GetUserByUsernameOrEmail(username, email string) (*User, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	filter := bson.M{
+		"$or": []bson.M{
+			{"username": username},
+			{"email": email},
+		},
+	}
+
+	var user User
+	err := m.Collection.FindOne(ctx, filter).Decode(&user)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &user, nil
 }
 
 func (m *MongoDB) EditUser(input User) error {
