@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/ciameksw/reserve-park/user/internal/user/auth"
@@ -236,6 +237,26 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	s.Logger.Info.Printf("User logged in: %v", user.Username)
 	resp := map[string]string{
 		"jwt": jwt,
+	}
+	s.writeJSON(w, resp, http.StatusOK)
+}
+
+func (s *Server) authorize(w http.ResponseWriter, r *http.Request) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		s.handleError(w, "Missing Authorization header", nil, http.StatusUnauthorized)
+		return
+	}
+
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	claims, err := auth.ValidateJWT(tokenString, s.Config.Salt)
+	if err != nil {
+		s.handleError(w, "Invalid or expired token", err, http.StatusUnauthorized)
+		return
+	}
+
+	resp := map[string]string{
+		"role": string(claims.Role),
 	}
 	s.writeJSON(w, resp, http.StatusOK)
 }

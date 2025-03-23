@@ -29,6 +29,8 @@ func NewServer(log *logger.Logger, cfg *config.Config, db *mongodb.MongoDB) *Ser
 func (s *Server) Start() {
 	r := mux.NewRouter()
 
+	r.HandleFunc("/users/authorize", s.authorize).Methods("GET")
+
 	r.HandleFunc("/users", s.addUser).Methods("POST")
 	r.HandleFunc("/users", s.editUser).Methods("PUT")
 	r.HandleFunc("/users/{id}", s.deleteUser).Methods("DELETE")
