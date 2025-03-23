@@ -14,10 +14,10 @@ import (
 )
 
 type addInput struct {
-	Username string     `json:"username"`
-	Email    string     `json:"email"`
-	Password string     `json:"password"`
-	Role     m.RoleType `json:"role"`
+	Username string     `json:"username" validate:"required,min=3,max=30"`
+	Email    string     `json:"email" validate:"required,email"`
+	Password string     `json:"password" validate:"required"`
+	Role     m.RoleType `json:"role" validate:"required,oneof=admin user"`
 }
 
 func (s *Server) addUser(w http.ResponseWriter, r *http.Request) {
@@ -27,6 +27,11 @@ func (s *Server) addUser(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
 		s.handleError(w, "Failed to decode request body", err, http.StatusBadRequest)
+		return
+	}
+
+	if err := s.Validator.Struct(input); err != nil {
+		s.handleError(w, err.Error(), err, http.StatusBadRequest)
 		return
 	}
 
@@ -55,11 +60,6 @@ func (s *Server) addUser(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt:    time.Now(),
 	}
 
-	if err := s.Validator.Struct(data); err != nil {
-		s.handleError(w, err.Error(), err, http.StatusBadRequest)
-		return
-	}
-
 	err = s.MongoDB.AddUser(data)
 	if err != nil {
 		s.handleError(w, "Failed to add user to MongoDB", err, http.StatusInternalServerError)
@@ -72,11 +72,11 @@ func (s *Server) addUser(w http.ResponseWriter, r *http.Request) {
 }
 
 type editInput struct {
-	UserID   string     `json:"user_id"`
-	Username string     `json:"username"`
-	Email    string     `json:"email"`
-	Password string     `json:"password"`
-	Role     m.RoleType `json:"role"`
+	UserID   string     `json:"user_id" validate:"required"`
+	Username string     `json:"username" validate:"required,min=3,max=30"`
+	Email    string     `json:"email" validate:"required,email"`
+	Password string     `json:"password" validate:"required"`
+	Role     m.RoleType `json:"role" validate:"required,oneof=admin user"`
 }
 
 func (s *Server) editUser(w http.ResponseWriter, r *http.Request) {
@@ -86,6 +86,11 @@ func (s *Server) editUser(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
 		s.handleError(w, "Failed to decode request body", err, http.StatusBadRequest)
+		return
+	}
+
+	if err := s.Validator.Struct(input); err != nil {
+		s.handleError(w, err.Error(), err, http.StatusBadRequest)
 		return
 	}
 
@@ -103,11 +108,6 @@ func (s *Server) editUser(w http.ResponseWriter, r *http.Request) {
 		PasswordHash: hashedPassword,
 		Role:         input.Role,
 		UpdatedAt:    time.Now(),
-	}
-
-	if err := s.Validator.Struct(data); err != nil {
-		s.handleError(w, err.Error(), err, http.StatusBadRequest)
-		return
 	}
 
 	err = s.MongoDB.EditUser(data)
