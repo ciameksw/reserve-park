@@ -73,10 +73,10 @@ func (s *Server) addUser(w http.ResponseWriter, r *http.Request) {
 
 type editInput struct {
 	UserID   string     `json:"user_id" validate:"required"`
-	Username string     `json:"username" validate:"required,min=3,max=30"`
-	Email    string     `json:"email" validate:"required,email"`
-	Password string     `json:"password" validate:"required"`
-	Role     m.RoleType `json:"role" validate:"required,oneof=admin user"`
+	Username string     `json:"username,omitempty" bson:"username,omitempty"`
+	Email    string     `json:"email,omitempty" bson:"email,omitempty"`
+	Password string     `json:"password,omitempty" bson:"-"`
+	Role     m.RoleType `json:"role,omitempty" bson:"role,omitempty"`
 }
 
 func (s *Server) editUser(w http.ResponseWriter, r *http.Request) {
@@ -94,23 +94,25 @@ func (s *Server) editUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Change this, we dont want to provide the password every time
-	hashedPassword, err := auth.HashPassword(input.Password)
+	existingUser, err := s.MongoDB.GetUser(input.UserID)
 	if err != nil {
-		s.handleError(w, "Failed to hash the password", err, http.StatusInternalServerError)
+		if err == mongo.ErrNoDocuments {
+			s.handleError(w, "User not found", err, http.StatusNotFound)
+			return
+		}
+		s.handleError(w, "Failed to fetch user from MongoDB", err, http.StatusInternalServerError)
 		return
 	}
 
-	data := m.User{
-		UserID:       uuid.NewString(),
-		Username:     input.Username,
-		Email:        input.Email,
-		PasswordHash: hashedPassword,
-		Role:         input.Role,
-		UpdatedAt:    time.Now(),
+	updatedUser, err := updateUserFields(existingUser, input)
+	if err != nil {
+		s.handleError(w, "Failed to process input data", err, http.StatusInternalServerError)
+		return
 	}
 
-	err = s.MongoDB.EditUser(data)
+	// Check if username and email are free
+
+	err = s.MongoDB.EditUser(updatedUser)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			s.handleError(w, "User not found", err, http.StatusNotFound)
@@ -282,4 +284,28 @@ func (s *Server) writeJSON(w http.ResponseWriter, data interface{}, statusCode i
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	w.Write(j)
+}
+
+func updateUserFields(existingUser m.User, input editInput) (m.User, error) {
+	if input.Username != "" {
+		existingUser.Username = input.Username
+	}
+	if input.Email != "" {
+		existingUser.Email = input.Email
+	}
+	if input.Role != "" {
+		existingUser.Role = input.Role
+	}
+
+	if input.Password != "" {
+		hashedPassword, err := auth.HashPassword(input.Password)
+		if err != nil {
+			return m.User{}, err
+		}
+		existingUser.PasswordHash = hashedPassword
+	}
+
+	existingUser.UpdatedAt = time.Now()
+
+	return existingUser, nil
 }

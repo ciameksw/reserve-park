@@ -32,7 +32,7 @@ func (s *Server) Start() {
 	r.HandleFunc("/users/authorize", s.authorize).Methods("GET")
 
 	r.HandleFunc("/users", s.addUser).Methods("POST")
-	r.HandleFunc("/users", s.editUser).Methods("PUT")
+	r.HandleFunc("/users", s.editUser).Methods("PATCH")
 	r.HandleFunc("/users/{id}", s.deleteUser).Methods("DELETE")
 	r.HandleFunc("/users/{id}", s.getUser).Methods("GET")
 	r.HandleFunc("/users", s.getAllUsers).Methods("GET")
