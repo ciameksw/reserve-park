@@ -94,7 +94,7 @@ func (s *Server) editUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existingUser, err := s.MongoDB.GetUser(input.UserID)
+	existingUser, err := s.MongoDB.GetFullUser(input.UserID)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			s.handleError(w, "User not found", err, http.StatusNotFound)

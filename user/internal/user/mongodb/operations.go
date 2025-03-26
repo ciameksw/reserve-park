@@ -77,7 +77,7 @@ func (m *MongoDB) DeleteUser(userID string) error {
 	return res.Err()
 }
 
-func (m *MongoDB) GetUser(userID string) (User, error) {
+func (m *MongoDB) GetFullUser(userID string) (User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -88,7 +88,27 @@ func (m *MongoDB) GetUser(userID string) (User, error) {
 	return user, err
 }
 
-func (m *MongoDB) GetAll() ([]User, error) {
+type UserResponse struct {
+	ID        primitive.ObjectID `json:"id,omitempty"`
+	UserID    string             `json:"user_id"`
+	Username  string             `json:"username"`
+	Email     string             `json:"email"`
+	Role      RoleType           `json:"role"`
+	UpdatedAt time.Time          `json:"updated_at"`
+}
+
+func (m *MongoDB) GetUser(userID string) (UserResponse, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	filter := bson.M{"user_id": bson.M{"$eq": userID}}
+
+	var user UserResponse
+	err := m.Collection.FindOne(ctx, filter).Decode(&user)
+	return user, err
+}
+
+func (m *MongoDB) GetAll() ([]UserResponse, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -98,7 +118,7 @@ func (m *MongoDB) GetAll() ([]User, error) {
 	}
 	defer cursor.Close(ctx)
 
-	var users []User
+	var users []UserResponse
 	err = cursor.All(ctx, &users)
 	return users, err
 }
