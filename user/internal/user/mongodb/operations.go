@@ -34,7 +34,15 @@ func (m *MongoDB) AddUser(user User) error {
 	return err
 }
 
+func (m *MongoDB) GetUserByUsernameOrEmailForEdit(username, email, editUserID string) (*User, error) {
+	return m.getUserByUsernameOrEmail(username, email, editUserID)
+}
+
 func (m *MongoDB) GetUserByUsernameOrEmail(username, email string) (*User, error) {
+	return m.getUserByUsernameOrEmail(username, email, "")
+}
+
+func (m *MongoDB) getUserByUsernameOrEmail(username, email, editUserID string) (*User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -43,6 +51,11 @@ func (m *MongoDB) GetUserByUsernameOrEmail(username, email string) (*User, error
 			{"username": username},
 			{"email": email},
 		},
+	}
+
+	// If we are in edit mode, exclude the edited user from the check
+	if editUserID != "" {
+		filter["reservation_id"] = bson.M{"$ne": editUserID}
 	}
 
 	var user User

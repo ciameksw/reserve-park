@@ -94,7 +94,7 @@ func (s *Server) editUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existingUser, err := s.MongoDB.GetFullUser(input.UserID)
+	user, err := s.MongoDB.GetFullUser(input.UserID)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			s.handleError(w, "User not found", err, http.StatusNotFound)
@@ -104,13 +104,21 @@ func (s *Server) editUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedUser, err := updateUserFields(existingUser, input)
+	updatedUser, err := updateUserFields(user, input)
 	if err != nil {
 		s.handleError(w, "Failed to process input data", err, http.StatusInternalServerError)
 		return
 	}
 
-	// Check if username and email are free
+	existingUser, err := s.MongoDB.GetUserByUsernameOrEmail(updatedUser.Username, updatedUser.Email)
+	if err != nil && err != mongo.ErrNoDocuments {
+		s.handleError(w, "Failed to check for existing user", err, http.StatusInternalServerError)
+		return
+	}
+	if existingUser != nil {
+		s.handleError(w, "Username or email already exists", nil, http.StatusConflict)
+		return
+	}
 
 	err = s.MongoDB.EditUser(updatedUser)
 	if err != nil {
