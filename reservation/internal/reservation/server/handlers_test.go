@@ -92,7 +92,7 @@ func TestGetAllReservations(t *testing.T) {
 	}
 }
 
-func TestGetUser(t *testing.T) {
+func TestGetReservation(t *testing.T) {
 	req, err := http.NewRequest("GET", "/reservations/"+reservationID, nil)
 	if err != nil {
 		t.Fatalf("Failed to create request: %v", err)

@@ -206,6 +206,10 @@ type loginInput struct {
 	Password string `json:"password" validate:"required"`
 }
 
+type loginResponse struct {
+	Jwt string `json:"jwt"`
+}
+
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	s.Logger.Info.Println("Logging user")
 	var input loginInput
@@ -245,8 +249,8 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.Logger.Info.Printf("User logged in: %v", user.Username)
-	resp := map[string]string{
-		"jwt": jwt,
+	resp := loginResponse{
+		Jwt: jwt,
 	}
 	s.writeJSON(w, resp, http.StatusOK)
 }
