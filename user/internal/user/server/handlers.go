@@ -110,7 +110,7 @@ func (s *Server) editUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existingUser, err := s.MongoDB.GetUserByUsernameOrEmail(updatedUser.Username, updatedUser.Email)
+	existingUser, err := s.MongoDB.GetUserByUsernameOrEmailForEdit(updatedUser.Username, updatedUser.Email, updatedUser.UserID)
 	if err != nil && err != mongo.ErrNoDocuments {
 		s.handleError(w, "Failed to check for existing user", err, http.StatusInternalServerError)
 		return
