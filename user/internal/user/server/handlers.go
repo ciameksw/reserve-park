@@ -236,6 +236,11 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if user == nil {
+		s.handleError(w, "Invalid username or password", err, http.StatusUnauthorized)
+		return
+	}
+
 	match := auth.VerifyPassword(input.Password, user.PasswordHash)
 	if !match {
 		s.handleError(w, "Invalid username or password", err, http.StatusUnauthorized)
