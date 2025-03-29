@@ -55,7 +55,7 @@ func (m *MongoDB) getUserByUsernameOrEmail(username, email, editUserID string) (
 
 	// If we are in edit mode, exclude the edited user from the check
 	if editUserID != "" {
-		filter["reservation_id"] = bson.M{"$ne": editUserID}
+		filter["user_id"] = bson.M{"$ne": editUserID}
 	}
 
 	var user User
@@ -102,12 +102,12 @@ func (m *MongoDB) GetFullUser(userID string) (User, error) {
 }
 
 type UserResponse struct {
-	ID        primitive.ObjectID `json:"id,omitempty"`
-	UserID    string             `json:"user_id"`
-	Username  string             `json:"username"`
-	Email     string             `json:"email"`
-	Role      RoleType           `json:"role"`
-	UpdatedAt time.Time          `json:"updated_at"`
+	ID        primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
+	UserID    string             `json:"user_id" bson:"user_id"`
+	Username  string             `json:"username" bson:"username"`
+	Email     string             `json:"email" bson:"email"`
+	Role      RoleType           `json:"role" bson:"role"`
+	UpdatedAt time.Time          `json:"updated_at" bson:"updated_at"`
 }
 
 func (m *MongoDB) GetUser(userID string) (UserResponse, error) {

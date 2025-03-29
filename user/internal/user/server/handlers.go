@@ -73,10 +73,10 @@ func (s *Server) addUser(w http.ResponseWriter, r *http.Request) {
 
 type editInput struct {
 	UserID   string     `json:"user_id" validate:"required"`
-	Username string     `json:"username,omitempty" bson:"username,omitempty"`
-	Email    string     `json:"email,omitempty" bson:"email,omitempty"`
-	Password string     `json:"password,omitempty" bson:"-"`
-	Role     m.RoleType `json:"role,omitempty" bson:"role,omitempty"`
+	Username string     `json:"username,omitempty" validate:"omitempty,min=3,max=30"`
+	Email    string     `json:"email,omitempty" validate:"omitempty,email"`
+	Password string     `json:"password,omitempty"`
+	Role     m.RoleType `json:"role,omitempty" validate:"omitempty,oneof=admin user"`
 }
 
 func (s *Server) editUser(w http.ResponseWriter, r *http.Request) {
@@ -131,7 +131,7 @@ func (s *Server) editUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.Logger.Info.Printf("User edited: %v", input.Username)
+	s.Logger.Info.Printf("User edited: %v", updatedUser.Username)
 	w.WriteHeader(http.StatusOK)
 }
 
