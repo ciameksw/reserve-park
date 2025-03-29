@@ -1,19 +1,21 @@
 module github.com/ciameksw/reserve-park/reservation
 
-go 1.22.0
+go 1.22
 
-require go.mongodb.org/mongo-driver v1.17.2
+require (
+	github.com/benweissmann/memongo v0.1.1
+	github.com/go-playground/validator/v10 v10.25.0
+	github.com/google/uuid v1.6.0
+	github.com/gorilla/mux v1.8.1
+	go.mongodb.org/mongo-driver v1.17.2
+)
 
 require (
 	github.com/acobaugh/osrelease v0.0.0-20181218015638-a93a0a55a249 // indirect
-	github.com/benweissmann/memongo v0.1.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/go-playground/validator/v10 v10.25.0 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/uuid v1.6.0 // indirect
-	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/klauspost/compress v1.16.7 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/montanaflynn/stats v0.7.1 // indirect
