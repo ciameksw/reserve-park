@@ -25,7 +25,7 @@ func (s *Server) addSpot(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
-		s.handleError(w, "Failed to decode request body", err, http.StatusBadGateway)
+		s.handleError(w, "Failed to decode request body", err, http.StatusBadRequest)
 		return
 	}
 
