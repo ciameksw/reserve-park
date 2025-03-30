@@ -111,14 +111,17 @@ func TestGetReservation(t *testing.T) {
 }
 
 func TestEditReservation(t *testing.T) {
+	startTime := time.Now()
+	endTime := time.Now().Add(2 * time.Hour)
+	pricePaid := 10.0
 	input := editInput{
 		ReservationID: reservationID,
 		UserID:        userID,
 		SpotID:        spotID,
-		StartTime:     time.Now(),
-		EndTime:       time.Now().Add(2 * time.Hour),
+		StartTime:     &startTime,
+		EndTime:       &endTime,
 		Status:        "valid",
-		PricePaid:     10.0,
+		PricePaid:     &pricePaid,
 	}
 	body, _ := json.Marshal(input)
 	req, err := http.NewRequest("PUT", "/reservations", bytes.NewBuffer(body))

@@ -110,11 +110,13 @@ func TestGetSpot(t *testing.T) {
 
 func TestEditUser(t *testing.T) {
 	pricePerHour = 10.5
-	input := mongodb.Spot{
+	latitude := -34.7365
+	longitude := 86.8271
+	input := editInput{
 		SpotID:       spotID,
-		Latitude:     -34.7365,
-		Longitude:    86.8271,
-		PricePerHour: pricePerHour,
+		Latitude:     &latitude,
+		Longitude:    &longitude,
+		PricePerHour: &pricePerHour,
 		Size:         mongodb.SizeSmall,
 		Type:         mongodb.SpotTypeEV,
 	}
@@ -129,8 +131,8 @@ func TestEditUser(t *testing.T) {
 
 	handler.ServeHTTP(rr, req)
 
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	if status := rr.Code; status != http.StatusNoContent {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNoContent)
 	}
 }
 
