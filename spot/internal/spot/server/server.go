@@ -32,7 +32,7 @@ func (s *Server) Start() {
 	r.HandleFunc("/spots/price", s.getPrice).Methods("GET")
 
 	r.HandleFunc("/spots", s.addSpot).Methods("POST")
-	r.HandleFunc("/spots", s.editSpot).Methods("PUT")
+	r.HandleFunc("/spots", s.editSpot).Methods("PATCH")
 	r.HandleFunc("/spots/{id}", s.deleteSpot).Methods("DELETE")
 	r.HandleFunc("/spots/{id}", s.getSpot).Methods("GET")
 	r.HandleFunc("/spots", s.getAllSpots).Methods("GET")

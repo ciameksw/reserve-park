@@ -56,12 +56,12 @@ func (s *Server) addSpot(w http.ResponseWriter, r *http.Request) {
 }
 
 type editInput struct {
-	SpotID       string     `json:"spot_id"`
-	Latitude     float64    `json:"latitude"`
-	Longitude    float64    `json:"longitude"`
-	PricePerHour float64    `json:"price_per_hour"`
-	Size         m.SizeType `json:"size"`
-	Type         m.SpotType `json:"type"`
+	SpotID       string     `json:"spot_id" validate:"required"`
+	Latitude     *float64   `json:"latitude"`
+	Longitude    *float64   `json:"longitude"`
+	PricePerHour *float64   `json:"price_per_hour" validate:"omitempty,gt=0"`
+	Size         m.SizeType `json:"size" validate:"omitempty,oneof=small medium large"`
+	Type         m.SpotType `json:"type" validate:"omitempty,oneof=indoor outdoor ev"`
 }
 
 func (s *Server) editSpot(w http.ResponseWriter, r *http.Request) {
@@ -74,22 +74,29 @@ func (s *Server) editSpot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := m.Spot{
-		SpotID:       input.SpotID,
-		Latitude:     input.Latitude,
-		Longitude:    input.Longitude,
-		PricePerHour: float64(int(input.PricePerHour*100)) / 100,
-		Size:         input.Size,
-		Type:         input.Type,
-		UpdatedAt:    time.Now(),
-	}
-
-	if err := s.Validator.Struct(data); err != nil {
+	if err := s.Validator.Struct(input); err != nil {
 		s.handleError(w, err.Error(), err, http.StatusBadRequest)
 		return
 	}
 
-	err = s.MongoDB.EditSpot(data)
+	spot, err := s.MongoDB.GetSpot(input.SpotID)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			s.handleError(w, "Spot not found", err, http.StatusNotFound)
+			return
+		}
+
+		s.handleError(w, "Failed to get spot from MongoDB", err, http.StatusInternalServerError)
+		return
+	}
+
+	updatedSpot, err := updateSpotFields(spot, input)
+	if err != nil {
+		s.handleError(w, "Failed to process input data", err, http.StatusInternalServerError)
+		return
+	}
+
+	err = s.MongoDB.EditSpot(updatedSpot)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			s.handleError(w, "Spot not found", err, http.StatusNotFound)
@@ -224,4 +231,36 @@ func (s *Server) writeJSON(w http.ResponseWriter, data interface{}, statusCode i
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	w.Write(j)
+}
+
+func updateSpotFields(existingSpot m.Spot, input editInput) (m.Spot, error) {
+	// Check if Latitude is provided
+	if input.Latitude != nil {
+		existingSpot.Latitude = *input.Latitude
+	}
+
+	// Check if Longitude is provided
+	if input.Longitude != nil {
+		existingSpot.Longitude = *input.Longitude
+	}
+
+	// Check if PricePerHour is provided
+	if input.PricePerHour != nil {
+		existingSpot.PricePerHour = float64(int(*input.PricePerHour*100)) / 100
+	}
+
+	// Check if Size is provided
+	if input.Size != "" {
+		existingSpot.Size = input.Size
+	}
+
+	// Check if Type is provided
+	if input.Type != "" {
+		existingSpot.Type = input.Type
+	}
+
+	// Always update the UpdatedAt field
+	existingSpot.UpdatedAt = time.Now()
+
+	return existingSpot, nil
 }
