@@ -108,7 +108,7 @@ func (s *Server) editSpot(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.Logger.Info.Printf("Spot edited: %v", input.SpotID)
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s *Server) deleteSpot(w http.ResponseWriter, r *http.Request) {

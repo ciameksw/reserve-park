@@ -75,13 +75,13 @@ func (s *Server) addReservation(w http.ResponseWriter, r *http.Request) {
 }
 
 type editInput struct {
-	ReservationID string       `json:"reservation_id"`
+	ReservationID string       `json:"reservation_id" validate:"required"`
 	UserID        string       `json:"user_id"`
 	SpotID        string       `json:"spot_id"`
-	StartTime     time.Time    `json:"start_time"`
-	EndTime       time.Time    `json:"end_time"`
-	Status        m.StatusType `json:"status"`
-	PricePaid     float64      `json:"price_paid"`
+	StartTime     *time.Time   `json:"start_time"`
+	EndTime       *time.Time   `json:"end_time"`
+	Status        m.StatusType `json:"status" validate:"omitempty,oneof=valid canceled"`
+	PricePaid     *float64     `json:"price_paid" validate:"omitempty,gt=0"`
 }
 
 func (s *Server) editReservation(w http.ResponseWriter, r *http.Request) {
@@ -94,29 +94,35 @@ func (s *Server) editReservation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := m.Reservation{
-		ReservationID: input.ReservationID,
-		UserID:        input.UserID,
-		SpotID:        input.SpotID,
-		StartTime:     input.StartTime,
-		EndTime:       input.EndTime,
-		Status:        input.Status,
-		PricePaid:     input.PricePaid,
-		UpdatedAt:     time.Now(),
-	}
-
-	if err := s.Validator.Struct(data); err != nil {
+	if err := s.Validator.Struct(input); err != nil {
 		s.handleError(w, err.Error(), err, http.StatusBadRequest)
 		return
 	}
 
-	availableInput := m.AvailabilityInput{
-		SpotIDs:   []string{data.SpotID},
-		StartTime: data.StartTime,
-		EndTime:   data.EndTime,
+	reservation, err := s.MongoDB.GetReservation(input.ReservationID)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			s.handleError(w, "Reservation not found", err, http.StatusNotFound)
+			return
+		}
+
+		s.handleError(w, "Failed to get reservation from MongoDB", err, http.StatusInternalServerError)
+		return
 	}
 
-	availableSpots, err := s.MongoDB.CheckAvailabilityForEdit(availableInput, data.ReservationID)
+	updatedReservation, err := updateReservationFields(reservation, input)
+	if err != nil {
+		s.handleError(w, "Failed to process input data", err, http.StatusInternalServerError)
+		return
+	}
+
+	availableInput := m.AvailabilityInput{
+		SpotIDs:   []string{updatedReservation.SpotID},
+		StartTime: updatedReservation.StartTime,
+		EndTime:   updatedReservation.EndTime,
+	}
+
+	availableSpots, err := s.MongoDB.CheckAvailabilityForEdit(availableInput, updatedReservation.ReservationID)
 	if err != nil {
 		s.handleError(w, "Failed to check availability", err, http.StatusInternalServerError)
 		return
@@ -127,7 +133,7 @@ func (s *Server) editReservation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.MongoDB.EditReservation(data)
+	err = s.MongoDB.EditReservation(updatedReservation)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			s.handleError(w, "Reservation not found", err, http.StatusNotFound)
@@ -320,4 +326,30 @@ func (s *Server) writeJSON(w http.ResponseWriter, data interface{}, statusCode i
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	w.Write(j)
+}
+
+func updateReservationFields(existingReservation m.Reservation, input editInput) (m.Reservation, error) {
+	if input.UserID != "" {
+		existingReservation.UserID = input.UserID
+	}
+	if input.SpotID != "" {
+		existingReservation.SpotID = input.SpotID
+	}
+	if input.Status != "" {
+		existingReservation.Status = input.Status
+	}
+
+	if input.StartTime != nil {
+		existingReservation.StartTime = *input.StartTime
+	}
+	if input.EndTime != nil {
+		existingReservation.EndTime = *input.EndTime
+	}
+	if input.PricePaid != nil {
+		existingReservation.PricePaid = *input.PricePaid
+	}
+
+	existingReservation.UpdatedAt = time.Now()
+
+	return existingReservation, nil
 }

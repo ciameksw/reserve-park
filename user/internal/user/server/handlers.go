@@ -132,7 +132,7 @@ func (s *Server) editUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.Logger.Info.Printf("User edited: %v", updatedUser.Username)
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s *Server) deleteUser(w http.ResponseWriter, r *http.Request) {
