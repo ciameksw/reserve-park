@@ -29,7 +29,7 @@
 ### 2. Get Spot by ID
 - **Method**: GET  
 - **Endpoint**: `/spots/{id}`  
-- **Description**: Retrieves a parking spot by its spotID.  
+- **Description**: Retrieves a parking spot by its spot ID.  
 - **Response**:
     - **200 OK**:
       ```json
@@ -72,7 +72,7 @@
 ### 4. Delete Spot
 - **Method**: DELETE  
 - **Endpoint**: `/spots/{id}`  
-- **Description**: Deletes a parking spot by its spotID.  
+- **Description**: Deletes a parking spot by its spot ID.  
 - **Response**:
     - **204 No Content**: If the deletion is successful.
     - **400 Bad Request**: If the `id` is missing or invalid.
