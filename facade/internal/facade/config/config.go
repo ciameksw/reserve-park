@@ -19,7 +19,7 @@ func GetConfig() *Config {
 		ServerPort:     getEnv("SERVER_PORT", "3004"),
 		SpotURL:        getEnv("SPOT_URL", "http://localhost:3002"),
 		UserURL:        getEnv("USER_URL", "http://localhost:3001"),
-		ReservationURL: getEnv("RESERVATION_URL", "http://localhost:3001"),
+		ReservationURL: getEnv("RESERVATION_URL", "http://localhost:3003"),
 	}
 }
 
