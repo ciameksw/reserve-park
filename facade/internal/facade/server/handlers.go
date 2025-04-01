@@ -1,0 +1,30 @@
+package server
+
+import (
+	"io"
+	"net/http"
+)
+
+func (s *Server) login(w http.ResponseWriter, r *http.Request) {
+	s.Logger.Info.Println("Forwarding login request to user service")
+
+	resp, err := s.UserService.Login(r)
+	if err != nil {
+		s.handleError(w, "Failed to send request to user service", err, http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	w.WriteHeader(resp.StatusCode)
+	io.Copy(w, resp.Body)
+}
+
+// Helper function to handle errors
+func (s *Server) handleError(w http.ResponseWriter, message string, err error, statusCode int) {
+	if err != nil {
+		s.Logger.Error.Printf("%s: %v", message, err)
+	} else {
+		s.Logger.Error.Println(message)
+	}
+	http.Error(w, message, statusCode)
+}

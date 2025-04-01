@@ -1,12 +1,15 @@
 package server
 
 import (
+	"net/http"
+
 	"github.com/ciameksw/reserve-park/facade/internal/facade/config"
 	"github.com/ciameksw/reserve-park/facade/internal/facade/logger"
 	"github.com/ciameksw/reserve-park/facade/internal/facade/services/reservation"
 	"github.com/ciameksw/reserve-park/facade/internal/facade/services/spot"
 	"github.com/ciameksw/reserve-park/facade/internal/facade/services/user"
 	"github.com/go-playground/validator/v10"
+	"github.com/gorilla/mux"
 )
 
 type Server struct {
@@ -33,4 +36,15 @@ func NewServer(log *logger.Logger,
 	}
 }
 
-func (s *Server) Start() {}
+func (s *Server) Start() {
+	r := mux.NewRouter()
+
+	r.HandleFunc("/login", s.login).Methods("POST")
+
+	addr := s.Config.ServerHost + ":" + s.Config.ServerPort
+	s.Logger.Info.Printf("Server started at %s\n", addr)
+	err := http.ListenAndServe(addr, r)
+	if err != nil {
+		s.Logger.Error.Fatalf("Failed to start server: %v", err)
+	}
+}
