@@ -21,6 +21,22 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	io.Copy(w, resp.Body)
 }
 
+func (s *Server) getAllUsers(w http.ResponseWriter, r *http.Request) {
+	s.Logger.Info.Println("Forwarding login request to user service")
+
+	resp, err := s.UserService.GetAll(r)
+	if err != nil {
+		s.handleError(w, "Failed to send request to user service", err, http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
+
+	w.WriteHeader(resp.StatusCode)
+	io.Copy(w, resp.Body)
+}
+
 // Helper function to handle errors
 func (s *Server) handleError(w http.ResponseWriter, message string, err error, statusCode int) {
 	if err != nil {

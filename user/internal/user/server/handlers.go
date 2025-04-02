@@ -275,7 +275,8 @@ func (s *Server) authorize(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := map[string]string{
-		"role": string(claims.Role),
+		"role":    string(claims.Role),
+		"user_id": string(claims.UserID),
 	}
 	s.writeJSON(w, resp, http.StatusOK)
 }

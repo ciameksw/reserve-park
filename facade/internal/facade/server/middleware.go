@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -14,8 +15,13 @@ const (
 )
 
 type authorizeResponse struct {
-	Role string `json:"role"`
+	Role   string `json:"role"`
+	UserID string `json:"user_id"`
 }
+
+type contextKey string
+
+const userIDKey contextKey = "userID"
 
 func (s *Server) authorize(role RoleType, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -54,6 +60,8 @@ func (s *Server) authorize(role RoleType, next http.Handler) http.Handler {
 			return
 		}
 
-		next.ServeHTTP(w, r)
+		// Add the userID to the request context
+		ctx := context.WithValue(r.Context(), userIDKey, authResp.UserID)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

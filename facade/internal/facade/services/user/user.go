@@ -34,6 +34,24 @@ func (us *UserService) Login(r *http.Request) (*http.Response, error) {
 	return resp, nil
 }
 
+func (us *UserService) GetAll(r *http.Request) (*http.Response, error) {
+	userServiceURL := us.UserURL + "/users"
+
+	req, err := http.NewRequest(r.Method, userServiceURL, r.Body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", r.Header.Get("Content-Type"))
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
 func (us *UserService) Authorize(authHeader string) (*http.Response, error) {
 	userServiceURL := us.UserURL + "/users/authorize"
 
