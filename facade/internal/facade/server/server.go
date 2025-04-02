@@ -39,8 +39,7 @@ func NewServer(log *logger.Logger,
 func (s *Server) Start() {
 	r := mux.NewRouter()
 
-	r.HandleFunc("/login", s.login).Methods("POST")
-	r.Handle("/users", s.authorize("admin", http.HandlerFunc(s.getAllUsers))).Methods("GET")
+	s.addUserRoutes(r)
 
 	addr := s.Config.ServerHost + ":" + s.Config.ServerPort
 	s.Logger.Info.Printf("Server started at %s\n", addr)

@@ -21,9 +21,9 @@ type authorizeResponse struct {
 
 type contextKey string
 
-const userIDKey contextKey = "userID"
+const authorizeKey contextKey = "authorizeResponse"
 
-func (s *Server) authorize(role RoleType, next http.Handler) http.Handler {
+func (s *Server) authorize(requiredRole RoleType, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
@@ -55,13 +55,12 @@ func (s *Server) authorize(role RoleType, next http.Handler) http.Handler {
 			return
 		}
 
-		if RoleType(authResp.Role) != role {
+		if RoleType(authResp.Role) != requiredRole && RoleType(authResp.Role) != RoleAdmin {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
-		// Add the userID to the request context
-		ctx := context.WithValue(r.Context(), userIDKey, authResp.UserID)
+		ctx := context.WithValue(r.Context(), authorizeKey, authResp)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
