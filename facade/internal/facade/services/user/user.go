@@ -17,17 +17,32 @@ func NewUserService(cfg *config.Config) *UserService {
 }
 
 func (us *UserService) Login(r *http.Request) (*http.Response, error) {
-	// Construct the full URL for the user service
 	userServiceURL := us.UserURL + "/users/login"
 
-	// Create a new HTTP request to the user service
 	req, err := http.NewRequest(r.Method, userServiceURL, r.Body)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", r.Header.Get("Content-Type"))
 
-	// Send the request to the user service
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+func (us *UserService) Authorize(authHeader string) (*http.Response, error) {
+	userServiceURL := us.UserURL + "/users/authorize"
+
+	req, err := http.NewRequest(http.MethodGet, userServiceURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", authHeader)
+
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
