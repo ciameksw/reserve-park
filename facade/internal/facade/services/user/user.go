@@ -53,6 +53,24 @@ func (us *UserService) Login(r *http.Request) (*http.Response, error) {
 	return resp, nil
 }
 
+func (us *UserService) Edit(body []byte) (*http.Response, error) {
+	userServiceURL := us.UserURL + "/users"
+
+	req, err := http.NewRequest("PATCH", userServiceURL, bytes.NewBuffer(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
 func (us *UserService) GetAll(r *http.Request) (*http.Response, error) {
 	userServiceURL := us.UserURL + "/users"
 
