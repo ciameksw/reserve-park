@@ -119,6 +119,45 @@ func (s *Server) editUser(w http.ResponseWriter, r *http.Request) {
 	io.Copy(w, resp.Body)
 }
 
+type editRoleInput struct {
+	UserID string `json:"user_id" validate:"required"`
+	Role   string `json:"role" validate:"required,oneof=admin user"`
+}
+
+func (s *Server) editUsersRole(w http.ResponseWriter, r *http.Request) {
+	s.Logger.Info.Println("Editing a user")
+	var input editRoleInput
+
+	err := json.NewDecoder(r.Body).Decode(&input)
+	if err != nil {
+		s.handleError(w, "Failed to decode request body", err, http.StatusBadRequest)
+		return
+	}
+
+	if err := s.Validator.Struct(input); err != nil {
+		s.handleError(w, err.Error(), err, http.StatusBadRequest)
+		return
+	}
+
+	validatedBody, err := json.Marshal(input)
+	if err != nil {
+		s.handleError(w, "Failed to encode validated request body", err, http.StatusInternalServerError)
+		return
+	}
+
+	resp, err := s.UserService.Edit(validatedBody)
+	if err != nil {
+		s.handleError(w, "Failed to send request to user service", err, http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
+
+	w.WriteHeader(resp.StatusCode)
+	io.Copy(w, resp.Body)
+}
+
 func (s *Server) getAllUsers(w http.ResponseWriter, r *http.Request) {
 	s.Logger.Info.Println("Forwarding login request to user service")
 
