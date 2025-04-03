@@ -1,6 +1,9 @@
 package server
 
-import "net/http"
+import (
+	"io"
+	"net/http"
+)
 
 // Helper function to handle errors
 func (s *Server) handleError(w http.ResponseWriter, message string, err error, statusCode int) {
@@ -10,4 +13,13 @@ func (s *Server) handleError(w http.ResponseWriter, message string, err error, s
 		s.Logger.Error.Println(message)
 	}
 	http.Error(w, message, statusCode)
+}
+
+// Helper function to forward the response
+func (s *Server) forwardResponse(w http.ResponseWriter, resp *http.Response) {
+	defer resp.Body.Close()
+
+	w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
+	w.WriteHeader(resp.StatusCode)
+	io.Copy(w, resp.Body)
 }

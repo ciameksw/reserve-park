@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"io"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -43,12 +42,8 @@ func (s *Server) register(w http.ResponseWriter, r *http.Request) {
 		s.handleError(w, "Failed to send request to user service", err, http.StatusInternalServerError)
 		return
 	}
-	defer resp.Body.Close()
 
-	w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
-
-	w.WriteHeader(resp.StatusCode)
-	io.Copy(w, resp.Body)
+	s.forwardResponse(w, resp)
 }
 
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
@@ -59,12 +54,8 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		s.handleError(w, "Failed to send request to user service", err, http.StatusInternalServerError)
 		return
 	}
-	defer resp.Body.Close()
 
-	w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
-
-	w.WriteHeader(resp.StatusCode)
-	io.Copy(w, resp.Body)
+	s.forwardResponse(w, resp)
 }
 
 type editInput struct {
@@ -111,12 +102,8 @@ func (s *Server) editUser(w http.ResponseWriter, r *http.Request) {
 		s.handleError(w, "Failed to send request to user service", err, http.StatusInternalServerError)
 		return
 	}
-	defer resp.Body.Close()
 
-	w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
-
-	w.WriteHeader(resp.StatusCode)
-	io.Copy(w, resp.Body)
+	s.forwardResponse(w, resp)
 }
 
 type editRoleInput struct {
@@ -150,12 +137,8 @@ func (s *Server) editUsersRole(w http.ResponseWriter, r *http.Request) {
 		s.handleError(w, "Failed to send request to user service", err, http.StatusInternalServerError)
 		return
 	}
-	defer resp.Body.Close()
 
-	w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
-
-	w.WriteHeader(resp.StatusCode)
-	io.Copy(w, resp.Body)
+	s.forwardResponse(w, resp)
 }
 
 func (s *Server) getAllUsers(w http.ResponseWriter, r *http.Request) {
@@ -166,12 +149,8 @@ func (s *Server) getAllUsers(w http.ResponseWriter, r *http.Request) {
 		s.handleError(w, "Failed to send request to user service", err, http.StatusInternalServerError)
 		return
 	}
-	defer resp.Body.Close()
 
-	w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
-
-	w.WriteHeader(resp.StatusCode)
-	io.Copy(w, resp.Body)
+	s.forwardResponse(w, resp)
 }
 
 func (s *Server) getUserByID(w http.ResponseWriter, r *http.Request) {
@@ -194,12 +173,8 @@ func (s *Server) getUserByID(w http.ResponseWriter, r *http.Request) {
 		s.handleError(w, "Failed to send request to user service", err, http.StatusInternalServerError)
 		return
 	}
-	defer resp.Body.Close()
 
-	w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
-
-	w.WriteHeader(resp.StatusCode)
-	io.Copy(w, resp.Body)
+	s.forwardResponse(w, resp)
 }
 
 func (s *Server) deleteUserByID(w http.ResponseWriter, r *http.Request) {
@@ -222,10 +197,6 @@ func (s *Server) deleteUserByID(w http.ResponseWriter, r *http.Request) {
 		s.handleError(w, "Failed to send request to user service", err, http.StatusInternalServerError)
 		return
 	}
-	defer resp.Body.Close()
 
-	w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
-
-	w.WriteHeader(resp.StatusCode)
-	io.Copy(w, resp.Body)
+	s.forwardResponse(w, resp)
 }
