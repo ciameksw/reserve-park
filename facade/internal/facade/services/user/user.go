@@ -1,6 +1,7 @@
 package user
 
 import (
+	"bytes"
 	"net/http"
 
 	"github.com/ciameksw/reserve-park/facade/internal/facade/config"
@@ -14,6 +15,24 @@ func NewUserService(cfg *config.Config) *UserService {
 	return &UserService{
 		UserURL: cfg.UserURL,
 	}
+}
+
+func (us *UserService) Register(body []byte) (*http.Response, error) {
+	userServiceURL := us.UserURL + "/users"
+
+	req, err := http.NewRequest("POST", userServiceURL, bytes.NewBuffer(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
 }
 
 func (us *UserService) Login(r *http.Request) (*http.Response, error) {

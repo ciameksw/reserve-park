@@ -1,11 +1,55 @@
 package server
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 
 	"github.com/gorilla/mux"
 )
+
+type registerInput struct {
+	Username string `json:"username" validate:"required,min=3,max=30"`
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required"`
+	Role     string `json: "role"`
+}
+
+func (s *Server) register(w http.ResponseWriter, r *http.Request) {
+	s.Logger.Info.Println("Registering a new user")
+	var input registerInput
+
+	err := json.NewDecoder(r.Body).Decode(&input)
+	if err != nil {
+		s.handleError(w, "Failed to decode request body", err, http.StatusBadRequest)
+		return
+	}
+
+	if err := s.Validator.Struct(input); err != nil {
+		s.handleError(w, err.Error(), err, http.StatusBadRequest)
+		return
+	}
+
+	input.Role = "user"
+
+	modifiedBody, err := json.Marshal(input)
+	if err != nil {
+		s.handleError(w, "Failed to encode modified request body", err, http.StatusInternalServerError)
+		return
+	}
+
+	resp, err := s.UserService.Register(modifiedBody)
+	if err != nil {
+		s.handleError(w, "Failed to send request to user service", err, http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
+
+	w.WriteHeader(resp.StatusCode)
+	io.Copy(w, resp.Body)
+}
 
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	s.Logger.Info.Println("Forwarding login request to user service")
