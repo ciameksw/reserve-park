@@ -69,6 +69,23 @@ func (us *UserService) GetUser(userID string) (*http.Response, error) {
 	return resp, nil
 }
 
+func (us *UserService) DeleteUser(userID string) (*http.Response, error) {
+	userServiceURL := us.UserURL + "/users/" + userID
+
+	req, err := http.NewRequest("DELETE", userServiceURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
 func (us *UserService) Authorize(authHeader string) (*http.Response, error) {
 	userServiceURL := us.UserURL + "/users/authorize"
 
