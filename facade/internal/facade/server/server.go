@@ -40,6 +40,7 @@ func (s *Server) Start() {
 	r := mux.NewRouter()
 
 	s.addUserRoutes(r)
+	s.addSpotRoutes(r)
 
 	addr := s.Config.ServerHost + ":" + s.Config.ServerPort
 	s.Logger.Info.Printf("Server started at %s\n", addr)
