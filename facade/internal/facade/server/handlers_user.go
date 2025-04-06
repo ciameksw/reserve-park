@@ -47,7 +47,7 @@ func (s *Server) register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
-	s.Logger.Info.Println("Forwarding login request to user service")
+	s.Logger.Info.Println("Login user")
 
 	resp, err := s.UserService.Login(r)
 	if err != nil {
@@ -142,7 +142,7 @@ func (s *Server) editUsersRole(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) getAllUsers(w http.ResponseWriter, r *http.Request) {
-	s.Logger.Info.Println("Forwarding login request to user service")
+	s.Logger.Info.Println("Getting all users")
 
 	resp, err := s.UserService.GetAll(r)
 	if err != nil {
@@ -154,6 +154,8 @@ func (s *Server) getAllUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) getUserByID(w http.ResponseWriter, r *http.Request) {
+	s.Logger.Info.Println("Getting user by userID")
+
 	vars := mux.Vars(r)
 	requestedUserID := vars["id"]
 
@@ -178,6 +180,8 @@ func (s *Server) getUserByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) deleteUserByID(w http.ResponseWriter, r *http.Request) {
+	s.Logger.Info.Println("Deleting user by userID")
+
 	vars := mux.Vars(r)
 	requestedUserID := vars["id"]
 
