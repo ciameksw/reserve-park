@@ -41,6 +41,7 @@ func (s *Server) Start() {
 
 	s.addUserRoutes(r)
 	s.addSpotRoutes(r)
+	s.addReservationRoutes(r)
 
 	addr := s.Config.ServerHost + ":" + s.Config.ServerPort
 	s.Logger.Info.Printf("Server started at %s\n", addr)

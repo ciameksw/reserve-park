@@ -130,6 +130,7 @@ func (m *MongoDB) checkAvailability(input AvailabilityInput, editedReservationID
 		"spot_id":    bson.M{"$in": input.SpotIDs},
 		"start_time": bson.M{"$lt": input.EndTime},
 		"end_time":   bson.M{"$gt": input.StartTime},
+		"status":     bson.M{"$ne": StatusCanceled},
 	}
 
 	// If we are in edit mode, exclude the edited reservation from the check
