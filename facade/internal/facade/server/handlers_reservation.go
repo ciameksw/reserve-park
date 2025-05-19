@@ -175,6 +175,22 @@ func (s *Server) addReservation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if spot exists
+	spotID, ok := requestBody["spot_id"].(string)
+	if !ok {
+		s.handleError(w, "Unexpected error", nil, http.StatusBadRequest)
+		return
+	}
+	spotResp, err := s.SpotService.GetSpot(spotID)
+	if err != nil {
+		s.handleError(w, "Failed to send request to spot service", err, http.StatusInternalServerError)
+		return
+	}
+	if spotResp.StatusCode != http.StatusOK {
+		s.handleError(w, "Spot with provided spotID does not exist", err, http.StatusBadRequest)
+		return
+	}
+
 	// Forward the request to the reservation service
 	resp, err := s.ReservationService.Add(bodyBytes)
 	if err != nil {
@@ -222,8 +238,32 @@ func (s *Server) editReservation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if spot exists
+	spotID, ok := requestBody["spot_id"].(string)
+	if !ok {
+		s.handleError(w, "Unexpected error", nil, http.StatusBadRequest)
+		return
+	}
+	spotResp, err := s.SpotService.GetSpot(spotID)
+	if err != nil {
+		s.handleError(w, "Failed to send request to spot service", err, http.StatusInternalServerError)
+		return
+	}
+	if spotResp.StatusCode != http.StatusOK {
+		s.handleError(w, "Spot with provided spotID does not exist", err, http.StatusBadRequest)
+		return
+	}
+
+	// Delete status from request
+	delete(requestBody, "status")
+	bodyWithoutStatus, err := json.Marshal(requestBody)
+	if err != nil {
+		s.handleError(w, "Failed to encode request body", err, http.StatusInternalServerError)
+		return
+	}
+
 	// Forward the request to the reservation service
-	resp, err := s.ReservationService.Edit(bodyBytes)
+	resp, err := s.ReservationService.Edit(bodyWithoutStatus)
 	if err != nil {
 		s.handleError(w, "Failed to send request to reservation service", err, http.StatusInternalServerError)
 		return
