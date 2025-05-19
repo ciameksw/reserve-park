@@ -113,3 +113,37 @@ func (m *MongoDB) GetPrice(input GetPriceInput) (float64, error) {
 
 	return price, nil
 }
+
+func (m *MongoDB) CheckSpotsExist(spotIDs []string) ([]string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	filter := bson.M{"spot_id": bson.M{"$in": spotIDs}}
+
+	cursor, err := m.Collection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var spots []Spot
+	if err := cursor.All(ctx, &spots); err != nil {
+		return nil, err
+	}
+
+	// Collect all found spotIDs
+	foundSpots := make(map[string]struct{})
+	for _, spot := range spots {
+		foundSpots[spot.SpotID] = struct{}{}
+	}
+
+	// Find which spotIDs were not found
+	var notFound []string
+	for _, spotID := range spotIDs {
+		if _, exists := foundSpots[spotID]; !exists {
+			notFound = append(notFound, spotID)
+		}
+	}
+
+	return notFound, nil
+}
