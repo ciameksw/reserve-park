@@ -26,7 +26,7 @@ func (s *Server) addSpotRoutes(r *mux.Router) {
 	spotRouter := r.PathPrefix("/spots").Subrouter()
 
 	// User routes
-	spotRouter.Handle("/available", s.authorize(RoleUser, http.HandlerFunc(s.register))).Methods("GET") // TODO: Implement real handler
+	spotRouter.Handle("/available", s.authorize(RoleUser, http.HandlerFunc(s.getAvailableSpots))).Methods("GET")
 	spotRouter.Handle("/price", s.authorize(RoleUser, http.HandlerFunc(s.getSpotPrice))).Methods("GET")
 	spotRouter.Handle("", s.authorize(RoleUser, http.HandlerFunc(s.getAllSpots))).Methods("GET")
 	spotRouter.Handle("/{id}", s.authorize(RoleUser, http.HandlerFunc(s.getSpotByID))).Methods("GET")

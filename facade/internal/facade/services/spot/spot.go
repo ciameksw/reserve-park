@@ -1,6 +1,7 @@
 package spot
 
 import (
+	"bytes"
 	"net/http"
 
 	"github.com/ciameksw/reserve-park/facade/internal/facade/config"
@@ -23,6 +24,22 @@ func (ss *SpotService) GetSpotPrice(r *http.Request) (*http.Response, error) {
 		URL:         ss.SpotURL + "/spots/price",
 		Method:      r.Method,
 		Body:        r.Body,
+		ContentType: &ct,
+	}
+	resp, err := httpclient.SendRequest(params)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+func (ss *SpotService) CheckIfSpotsExist(body []byte) (*http.Response, error) {
+	ct := "application/json"
+	params := httpclient.RequestParams{
+		URL:         ss.SpotURL + "/spots/exist",
+		Method:      http.MethodGet,
+		Body:        bytes.NewBuffer(body),
 		ContentType: &ct,
 	}
 	resp, err := httpclient.SendRequest(params)

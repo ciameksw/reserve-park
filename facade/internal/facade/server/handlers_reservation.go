@@ -186,6 +186,7 @@ func (s *Server) addReservation(w http.ResponseWriter, r *http.Request) {
 		s.handleError(w, "Failed to send request to spot service", err, http.StatusInternalServerError)
 		return
 	}
+	defer spotResp.Body.Close()
 	if spotResp.StatusCode != http.StatusOK {
 		s.handleError(w, "Spot with provided spotID does not exist", err, http.StatusBadRequest)
 		return
@@ -249,6 +250,7 @@ func (s *Server) editReservation(w http.ResponseWriter, r *http.Request) {
 		s.handleError(w, "Failed to send request to spot service", err, http.StatusInternalServerError)
 		return
 	}
+	defer spotResp.Body.Close()
 	if spotResp.StatusCode != http.StatusOK {
 		s.handleError(w, "Spot with provided spotID does not exist", err, http.StatusBadRequest)
 		return

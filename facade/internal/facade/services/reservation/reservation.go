@@ -117,3 +117,19 @@ func (rs *ReservationService) Edit(body []byte) (*http.Response, error) {
 
 	return resp, nil
 }
+
+func (rs *ReservationService) CheckAvailability(body []byte) (*http.Response, error) {
+	ct := "application/json"
+	params := httpclient.RequestParams{
+		URL:         rs.ReservationURL + "/reservations/availability/check",
+		Method:      http.MethodGet,
+		Body:        bytes.NewBuffer(body),
+		ContentType: &ct,
+	}
+	resp, err := httpclient.SendRequest(params)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
