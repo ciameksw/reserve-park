@@ -210,6 +210,37 @@ func (s *Server) getPrice(w http.ResponseWriter, r *http.Request) {
 	s.writeJSON(w, resp, http.StatusOK)
 }
 
+func (s *Server) spotsExist(w http.ResponseWriter, r *http.Request) {
+	s.Logger.Info.Println("Checking if spots exist")
+
+	var input struct {
+		SpotIDs []string `json:"spot_ids"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		s.handleError(w, "Failed to decode request body", err, http.StatusBadRequest)
+		return
+	}
+
+	if len(input.SpotIDs) == 0 {
+		s.handleError(w, "spot_ids array is required", nil, http.StatusBadRequest)
+		return
+	}
+
+	notFound, err := s.MongoDB.CheckSpotsExist(input.SpotIDs)
+	if err != nil {
+		s.handleError(w, "Failed to check spot existence", err, http.StatusInternalServerError)
+		return
+	}
+
+	resp := map[string]interface{}{
+		"not_found": notFound,
+		"all_exist": len(notFound) == 0,
+	}
+
+	s.writeJSON(w, resp, http.StatusOK)
+}
+
 // Helper function to handle errors
 func (s *Server) handleError(w http.ResponseWriter, message string, err error, statusCode int) {
 	if err != nil {

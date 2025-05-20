@@ -138,6 +138,29 @@
 
 ---
 
+### 7. Check if spots exist
+- **Method**: GET  
+- **Endpoint**: `/spots/exist`  
+- **Description**: Checks if the spots exist in the db.  
+- **Request Body**:
+    ```json
+    {
+        "spot_ids": ["123e4567-e89b-12d3-a456-426614174000","456e7890-e12b-34d5-a678-426614174001"]
+    }
+    ```
+- **Response**:
+    - **200 OK**:
+      ```json
+      {
+        "all_exist": false,
+        "not_found": ["123e4567-e89b-12d3-a456-426614174000"]
+      }
+      ```
+    - **400 Bad Request**: If the request body is invalid.
+    - **500 Internal Server Error**: If there is an issue checking the spots.
+
+---
+
 ## MongoDB Document
 
 ### Spot Schema

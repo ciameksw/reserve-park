@@ -45,3 +45,18 @@ services:
       - MONGO_URI=mongodb://mongodb:27017
       - SERVER_HOST=0.0.0.0
       - SERVER_PORT=3003
+
+  facade:
+    build: ./facade
+    container_name: facade
+    ports:
+        - target: 3004
+          published: 3004
+          protocol: tcp
+          mode: host
+    environment:
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=3004
+      - USER_URL=http://user:3001
+      - SPOT_URL=http://spot:3002
+      - RESERVATION_URL=http://reservation:3003

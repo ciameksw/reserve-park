@@ -8,15 +8,15 @@ import (
 )
 
 type UserClaims struct {
-	Username string
-	Role     mongodb.RoleType
+	UserID string
+	Role   mongodb.RoleType
 	jwt.RegisteredClaims
 }
 
-func GenerateJWT(username string, role mongodb.RoleType, key string) (string, error) {
+func GenerateJWT(userID string, role mongodb.RoleType, key string) (string, error) {
 	claims := UserClaims{
-		Username: username,
-		Role:     role,
+		UserID: userID,
+		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(2 * time.Hour)),
