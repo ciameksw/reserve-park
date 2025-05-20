@@ -192,8 +192,16 @@ func (s *Server) addReservation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Forward the request to the reservation service
-	resp, err := s.ReservationService.Add(bodyBytes)
+	// Add valid status to request
+	requestBody["status"] = "valid"
+	newBody, err := json.Marshal(requestBody)
+	if err != nil {
+		s.handleError(w, "Failed to encode request body", err, http.StatusInternalServerError)
+		return
+	}
+
+	// Send the request to the reservation service
+	resp, err := s.ReservationService.Add(newBody)
 	if err != nil {
 		s.handleError(w, "Failed to send request to reservation service", err, http.StatusInternalServerError)
 		return
