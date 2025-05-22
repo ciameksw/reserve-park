@@ -8,7 +8,7 @@
 
 ## Architecture Overview
 
-![Reserve-Park Architecture](docs/overview.jpg)
+![Reserve-Park Architecture](docs/images/overview.jpg)
 
 ---
 
