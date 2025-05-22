@@ -188,7 +188,7 @@ func (s *Server) addReservation(w http.ResponseWriter, r *http.Request) {
 	}
 	defer spotResp.Body.Close()
 	if spotResp.StatusCode != http.StatusOK {
-		s.handleError(w, "Spot with provided spotID does not exist", err, http.StatusBadRequest)
+		s.handleError(w, "Spot with provided spotID does not exist", err, http.StatusNotFound)
 		return
 	}
 
@@ -260,7 +260,7 @@ func (s *Server) editReservation(w http.ResponseWriter, r *http.Request) {
 	}
 	defer spotResp.Body.Close()
 	if spotResp.StatusCode != http.StatusOK {
-		s.handleError(w, "Spot with provided spotID does not exist", err, http.StatusBadRequest)
+		s.handleError(w, "Spot with provided spotID does not exist", err, http.StatusNotFound)
 		return
 	}
 
@@ -296,6 +296,11 @@ func (s *Server) cancelReservation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		s.handleError(w, "Reservation does not exist", err, http.StatusNotFound)
+		return
+	}
 
 	// Read the response body
 	bodyBytes, err := io.ReadAll(resp.Body)
