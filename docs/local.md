@@ -1,4 +1,4 @@
-# Running Reserve Park Locally
+# Running Reserve-Park Locally
 
 This guide explains how to start the Reserve Park system on your local machine, including restoring MongoDB data from a backup.
 
